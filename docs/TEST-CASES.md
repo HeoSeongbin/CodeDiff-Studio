@@ -8,7 +8,7 @@ npm run build
 npm run test:e2e
 ```
 
-최종 결과 (2026-11-06): Unit **161/161**, Edge E2E **12/12**, typecheck/lint/build 통과. Monaco 번들 크기 경고 유지.
+최종 결과 (2026-11-06): 자동화 **271/271**, Edge E2E **18/18**, typecheck/lint/build 통과. Monaco 번들 크기 경고 유지.
 
 ## 단위 테스트
 
@@ -47,7 +47,7 @@ Phase 3 화면: docs/phase3-json-diff.png, docs/phase3-json-mobile.png. 새 도�
 
 ## Phase 4 최종 검증 (2026-11-06)
 
-현재 전체 결과: 단위 **161/161**, Edge E2E **12/12**, typecheck/lint/build 통과. 신규 패키지는 없음.
+Phase 4 당시 결과: 단위 **161/161**, Edge E2E **12/12**, typecheck/lint/build 통과. 신규 패키지는 없음.
 
 `src/tests/mapping.test.ts` — 신규 87개:
 
@@ -65,3 +65,23 @@ Phase 3 화면: docs/phase3-json-diff.png, docs/phase3-json-mobile.png. 새 도�
 3. prototype 경로 import 실패 시 기존 규칙 유지, versioned 실제 파일 export/import, empty array/null root/zero rules.
 
 화면: docs/phase4-mapping-desktop.png, docs/phase4-mapping-mobile.png. 미검증: 모바일 실기기·GitHub Pages·Phase 8 Worker 성능/취소. Phase 5 Patch 테스트는 다음 단계에서 추가한다.
+
+## Phase 5 최종 검증 (2026-11-06)
+
+전체 **229/229 테스트**, Edge E2E **15/15**, TypeScript·ESLint·Production Build 통과. `npm test`에는 Git CLI가 필요하다.
+
+- `src/tests/patch.test.ts` 53개: 원문 정확 적용(Unicode/BOM/EOF/혼합·CRLF↔LF/단독CR/빈쪽), 화면 옵션과 독립, 파일 생성/삭제·동일 파일, hunk 범위·문맥·통계, 경로 안전성·quoted Unicode, 손상된 Patch/원본/예상결과, 입력·출력 한도/NUL·surrogate, 0-line hunk 결정성.
+- `src/tests/patch-git.test.ts` 15개: 자동 생성된 임시 fixture에서 Git --check 후 실제 적용. 결과 bytes 일치·삭제 확인, 문맥0 flag, UTF-8 한글·공백 경로·EOF·CRLF/LF/혼합·빈 파일. cleanup은 검증된 tmpdir 하위 codediff-patch-*에만 수행.
+- `e2e/phase5.spec.ts` 3개: 화면 옵션으로 숨겨진 원문 차이, 실제 .diff/.patch 내용 및 Node 적용 결과, clipboard·CR 표시·재검증·0 context, 코드 편집 후 결과 무효화, 경로 오류·동일 파일, explicit create/delete·EOF·Unicode·390px overflow 없음. 외부 요청/pageerror 0건.
+
+최종 화면: docs/phase5-patch-desktop.png / docs/phase5-patch-mobile.png. 실제 GNU patch·GitHub Pages·실기기 및 대용량 성능은 미검증이며 다음 Phase 범위와 구분한다.
+
+## Phase 6 최종 검증 (2026-11-06)
+
+전체 **271/271 테스트**, Edge E2E **18/18**, typecheck/lint/build 통과. 신규 dependency 없음.
+
+- `src/tests/folder.test.ts`: 신규42개. native root/paths·제외 전 IO 방지·extension/case collision·budgets, file statuses/rename·빈/부재·EOF/EOL/Unicode/공백/BOM/UTF16, binary/mixed/error/size mismatch, cooperative cancellation/progress·300파일, content-free report·Map-safe tree·file→directory dual rows, byte-identical fast path와 diff timeout/error.
+- `e2e/phase6.spec.ts`: 신규3개. 실제 browser directory input을 임시 원본/수정 폴더로 검증. 모든 상태·binary/error·selected Diff·수동 Code Compare 교체 및 CRLF 편집/원본 disk 불변, full/subset JSON 다운로드, filter/excludes/empty/ignore-case, cancel/restart·350파일 가상 DOM 최대28, 실제 Diff의 390px 화면. 외부 요청/pageerror0.
+- ManagedDiffEditor로 Monaco detach-before-dispose 수명 관리 보정. binary 전환/Code Compare 재생성에서 발생하던 실제 pageerror를 탐지하고 해결한 뒤 모든 기존 E2E 재검증.
+
+화면: docs/phase6-folder-desktop.png / docs/phase6-folder-mobile.png. 실제 GitHub Pages·실기기·대형 project memory/time benchmark는 미검증. folder tests의 tmpdir codediff-folder-*는 생성된 절대경로 검증 후 그 디렉터리만 정리한다. 다음 AST 테스트는 Phase 7에서 추가한다.

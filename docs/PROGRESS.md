@@ -4,7 +4,7 @@
 
 ## 현재 Phase
 
-Phase 4 — Field Mapping 구현·검증 완료. 다음 단계는 Phase 5 — Patch Export. 이번 세션은 Phase 4 범위에서 종료한다. 이전 Phase 기록은 당시 이력이며, 최신 상태는 하단 Phase 4 기록을 기준으로 한다.
+Phase 6 — Folder Compare 구현·검증 완료. 다음 단계는 Phase 7 — Syntax Compare. 이번 세션은 Phase 6 범위에서 종료한다. 이전 Phase 기록은 당시 이력이며 최신 상태는 하단 Phase 6 기록을 기준으로 한다.
 
 ## 완료 작업
 
@@ -41,14 +41,14 @@ Phase 4 — Field Mapping 구현·검증 완료. 다음 단계는 Phase 5 — Pa
 - Monaco 시각 diff와 jsdiff 분석 목록은 독립 엔진. 모든 공백/대소문자/EOL 옵션 결과가 Monaco 강조와 다를 수 있어 화면 및 README에 안내.
 - npm audit: dev-only minimatch 전이 의존성에 moderate 10건 남음. 호환 범위 audit fix로 해결되지 않음. 무리한 강제 downgrade/override는 하지 않았으며 후속 의존성 업데이트 필요. critical/high 0건.
 - Worker 기반 Text Diff 계산·취소·대용량 성능 검증은 Phase 8. 현재 main-thread 250ms debounce, 1.5초 계산 timeout. 5 MiB는 측정된 성능 보장이 아닌 임시 상한.
-- Light 테마, MiniMap, Patch, Folder, AST, 배포는 미구현. Field Mapping은 Phase 4에서 구현했다. JSON Tools는 Phase 3에서 구현했다. Unified와 코드 다운로드는 Phase 2에서 구현했다.
-- Git 저장소는 Phase 2 이후 초기화 및 origin/main 연결·푸시 완료 (f551ae7). 배포는 미수행. 아래 Phase 1·2의 Git 미초기화 표기는 당시 이력이다.
+- Light 테마, MiniMap, AST, 배포는 미구현. Folder Compare는 Phase 6에서 구현했다. Patch Export는 Phase 5에서 구현했다. Field Mapping은 Phase 4에서 구현했다. JSON Tools는 Phase 3에서 구현했다. Unified와 코드 다운로드는 Phase 2에서 구현했다.
+- Git 저장소는 Phase 2 이후 초기화 및 origin/main 연결·푸시 완료 (최신 Phase 3·4 커밋 2382739). 배포는 미수행. 아래 Phase 1·2의 Git 미초기화 표기는 당시 이력이다.
 - E2E 실행 환경은 Edge 필요. 다른 OS는 playwright.config.ts의 channel 변경 또는 Chromium 설치 필요.
 - 배포 환경 및 모바일 실기기 미검증.
 
 ## 다음 작업
 
-다음 세션은 Phase 5에서 원문 기반 Unified Patch 생성·미리보기·다운로드와 적용 검증을 구현한다. 비교 옵션으로 정규화한 결과를 Patch 원문으로 사용하지 않는다. 시작 전 필수 문서와 Git 상태를 확인한다.
+다음 세션은 Phase 7에서 Tree-sitter runtime/WASM Grammar 호환성을 확인하고 Java/C#/Python 우선 AST 구조 추출·노드 매칭·변경 분류·Text Diff 연동과 정확성/지원 한계 테스트를 구현한다. 필수 문서·Git·기존 기능 검증 후 진행하며 파싱 성공을 의미론적 정확성으로 단정하지 않는다.
 
 ## Phase 2 · 2026-11-06 · 이번 세션
 
@@ -184,3 +184,92 @@ AGENTS/PROJECT/PROGRESS/DECISIONS/README와 소스·테스트를 확인했다. m
 - 현재 규칙 100개·경로 500자/80 depth·index<30k, source/target/규칙 문서 1 MiB·30k 값, 탐색 200k 보호 한도. Worker·대용량 성능 측정은 Phase 8이며 현재 한도가 지연시간 보장은 아님.
 - 패키지 변경 없는 Phase이므로 보안 조회는 재실행하지 않음. Phase 3의 runtime 0건/dev moderate 10건 기록 유지.
 - Phase 3·4 변경은 로컬 작업 트리에 남아 있으며 커밋·푸시는 수행하지 않았다. Phase 5 이후 미착수. 다음은 Phase 5 — Patch Export.
+
+## Phase 5 · 2026-11-06 · Patch Export
+
+### 시작 상태 대조
+
+AGENTS/PROJECT/PROGRESS/DECISIONS/README, 실제 소스 및 jsdiff의 create/apply/parse 구현과 타입을 확인했다. main은 origin/main과 동기화된 clean 상태였으며 Phase 3·4는 2382739까지 커밋·푸시된 상태였다. 기존 161개 테스트·TypeScript·ESLint가 통과했다.
+
+### 완료 작업
+
+- 독립 core/patch/patch.ts: 원문 기반 Unified Patch, file path/context/modify-create-delete 옵션, 생성 즉시 적용·수정본 정확 일치 검증.
+- jsdiff createTwoFilesPatch를 원문·ignoreWhitespace:false·stripTrailingCr:false로 호출. 출력 문자열을 다시 parse/apply하고 autoConvertLineEndings:false/fuzzFactor:0으로 검사. EOF 마커·원문 CRLF/LF/혼합 개행 보존.
+- 단일 대상 상대 경로 a/b 헤더, 공백·한글 경로 quoting, 위험 경로/제어문자/비정상 Unicode·NUL·범위 제한 검사.
+- 파일 생성·삭제는 사용자가 명시하며 /dev/null 헤더. 빈 텍스트로 파일 존재/rename을 추정하지 않음.
+- Patch Export 지연 로딩 화면, 현재 Code Compare 입력 요약과 왕복 이동, 문맥·작업·경로 설정, 검증 상태·추가/삭제/hunk 통계·미리보기·CR 표시·복사·.diff/.patch 저장·재검증.
+- 원문·설정 snapshot으로 이전 Patch를 render부터 무효화. 생성 중 상태 및 예약 계산 취소 세대 확인. 선택 표시/분석 옵션은 Patch 계산에 영향 없음.
+- UTF-8 저장 및 명시적 clipboard, 사용자 파일에 적용/서버 전송/영구 저장 없음. 신규 의존성 없음.
+
+### 발견·해결/설계 문제
+
+- jsdiff apply의 기본 자동 EOL 변환은 CRLF↔LF 변경을 손실할 수 있어 명시적으로 false. 실제 원문 적용 결과로 검증.
+- jsdiff formatPatch가 zero-line hunk 시작값을 변경하는 구현을 확인하여 생성 함수의 단일 출력만 사용하고 반복 생성 결정성 테스트.
+- 빈 텍스트는 파일 부재와 다르므로 기본 modify. create/delete만 /dev/null 사용. 내용 없는 파일 생성·삭제는 오류로 명시.
+- clipboard의 OS 개행 변환은 안내하고 실제 다운로드 바이트를 비교하여 정확성 확인.
+- Git 문맥 0은 --unidiff-zero 필요. UI와 README에 표시하고 실제 Git 테스트에서 적용.
+- 임시 Git 테스트 cleanup guard를 finally 밖에서 검증하여 안전 경로 검사와 ESLint no-unsafe-finally를 모두 충족.
+
+### 최종 검증
+
+- npm test: **229/229 통과** (기존 161 + Patch 68). Patch 신규는 코어 53 + 실제 Git 15.
+- npm run typecheck / npm run lint / npm run build: 통과.
+- 전체 Edge E2E **15/15 통과** (기존 12 + Patch 3), 테스트 포트 5195.
+- 코어: 추가/삭제/수정·여러 hunk·반복행·0/다수 문맥·빈 파일·EOF·CRLF/LF/혼합/단독CR·Unicode/BOM·순수 공백·잘못된 patch/원본/예상결과·위험 경로/크기/NUL/surrogate·생성/삭제 조건·결정성.
+- 실제 Git 2.54.0.windows.1: 독립 임시 경로에서 git apply --check 및 실제 적용 결과 UTF-8 bytes 일치 15개 통과. modify 빈 파일, create/delete, zero context, 한글·공백 경로, EOF/EOL 변경 포함. 실제 프로젝트 파일에 적용하지 않음.
+- E2E: 화면 옵션에서 동일해도 원문 변경 Patch 생성, CR 표시·문맥 0, .diff/.patch 실제 내용·적용 결과, clipboard·재검증, 편집 후 stale preview/다운로드 제거, 경로 오류, 동일 파일·작업 조건·Unicode 경로·삭제 EOF·390px layout. 외부 요청/pageerror 0건.
+- Patch lazy chunk 약 18.1 KB / gzip 7.2 KB, 기존 Monaco main 약 3.527 MB / gzip 919.8 KB·TS Worker 약 6 MB. 큰 chunk 경고 유지.
+- docs/phase5-patch-desktop.png 및 phase5-patch-mobile.png 생성·시각 검토. 이전 Phase 스크린샷은 회귀 테스트에서 갱신됨.
+
+### 제약 / 다음 작업
+
+- 단일 파일 text Patch. 내용 없는 파일 생성/삭제, rename·권한·binary·multi-file은 미지원. 전체 파일 바이트가 아닌 디코딩된 텍스트를 UTF-8로 저장하므로 UTF-16 원본 파일에 직접 적용하는 것을 보장하지 않음.
+- 메타데이터 LF, CR/LF 데이터 보존. Patch 줄 번호는 LF 기준이며 단독 CR은 데이터. clipboard 개행 보존은 OS 의존. 경로는 portable한 240자 상대 경로 subset.
+- 입력당 5 MiB/출력12 MiB/Diff 1.5초 timeout은 보호 한도. main-thread 전처리·적용 검증 전체 성능/취소·Worker는 Phase 8. 다른 CLI patch 도구·실제 GitHub Pages·모바일 실기기 미검증.
+- Phase 5 신규 의존성/보안 조회 없음. 기존 Phase 3 audit 기록(runtime 0, dev moderate 10) 유지.
+- Phase 5 변경은 로컬 작업 트리에 반영했고 커밋/푸시는 미수행. Phase 6 이후 미착수. 다음은 Phase 6 — Folder Compare.
+
+## Phase 6 · 2026-11-06 · Folder Compare
+
+### 시작 상태 대조
+
+필수 문서와 PROJECT의 폴더 비교 범위를 확인했다. main/origin은 2382739이며 Phase 5 미커밋 변경사항을 보존했다. 기존 229개 테스트·타입·ESLint 통과 후 Phase 6만 구현했다.
+
+### 완료 기능
+
+- core/folder/engine: 최상위 루트 제외 상대 경로 매칭, 존재 기준 ADDED/REMOVED/MODIFIED/UNCHANGED 및 ERROR_FILE. Rename 추정 없음.
+- native webkitdirectory 선택기·File.webkitRelativePath 검증, 명시적 빈 폴더, 별도 Zustand 입력/옵션과 lazy workspace. File 내용을 외부로 전송하지 않고 file refs/decoded text는 세션 메모리에만 유지.
+- node_modules/.git/dist/build/target/bin/obj 읽기 전 제외·편집/복원, root subtree 제외, extension filter, 경로 case·공백·인코딩 옵션. ambiguous case/duplicate 경로는 실패.
+- 텍스트는 기존 compareText 통계 사용, byte-identical 파일은 diff 생략, binary는 실제 bytes 비교. BOM/인코딩/EOL/EOF 보존. 디코딩/IO/과대 파일/Diff 계산 오류는 오류 상태와 통계 불가로 표시.
+- 전체 파일/디렉터리/상태/줄/오류/제외 통계, 28행 가상 폴더 트리·폴더 펼침/접기·검색·동일 숨김·kind filter. 파일→디렉터리 전환을 서로 다른 dir/file 행으로 표시.
+- 파일 선택 시 readonly Monaco 좌우/Unified와 메타데이터·오류/바이너리 안내. 명시적 Code Compare 복사로 현재 입력 교체, 새 모델로 EOL 감지. 원본 폴더와 snapshot은 편집하지 않음.
+- 전체/표시 subset JSON export: 내용 제외, paths/status/encoding/size/lines/options 및 전체 statsScope/실제 exportedRows. 명시적 다운로드만 사용.
+- 진행률·cooperative abort·요청 버전·snapshot identity 확인. 입력/옵션 변경 시 오래된 결과와 메모리 해제. 기본 읽기 예산과 개별파일 오류로 과대 입력 제어.
+
+### 발견·해결 문제
+
+- Monaco React DiffEditor가 모델을 연결된 상태에서 먼저 dispose하여 text↔binary 전환 및 Code Compare remount에서 브라우저 오류를 내는 것을 E2E에서 발견. ManagedDiffEditor layout cleanup으로 모델을 먼저 분리·해제한 뒤 wrapper passive cleanup이 수행되도록 수정. 최종 pageerror 0건.
+- Source/Modified readonly preview와 기존 Code Compare 모델을 분리하고 명시적 가져오기 때만 기존 Code Compare를 재생성하여 CRLF 편집을 보존. unmount 시 대기 upload 세대도 무효화.
+- 쉼표 입력을 즉시 split/join하면 다음 항목을 입력할 수 없던 제외/확장자 입력을 별도 raw draft 문자열로 보정.
+- file path가 다른 쪽의 directory prefix가 되는 경우 트리 Map 노드가 파일을 가릴 수 있어 dir/file 두 행과 distinct key로 보존.
+- read 오류와 계산 오류가 필터에서 빠지지 않게 ERROR_FILE/kind error로 일치. byte-identical 파일의 추가 Diff 계산을 생략하고 강제 계산 실패 mock 테스트 추가.
+- E2E의 미지원 assertion(toContainValue)을 toHaveValue(regex)로 수정. 코드 오류·타입·테스트 실패를 해결한 뒤 최종 통과 확인.
+
+### 최종 검증
+
+- npm test **271/271 통과** (기존229 + Folder42). 타입·ESLint·Production Build 통과.
+- 전체 Edge E2E **18/18 통과** (기존15 + Folder3), 포트5196.
+- core: 상대경로·native root·unsafe path, 필터/제외 읽기 전 차단, count/size/encoding preflight, case collisions, 모든 status·rename 정책·빈/부재·EOF/Unicode/repeat/EOL·BOM/encoding·공백, binary/mixed·invalid encoding/IO/over-limit, cancel/progress·300파일, source 없는 report·prototype-safe tree·file→folder·Diff failure.
+- E2E: 실제 임시 디렉터리 native 선택·정확한 추가3/삭제3/수정3/동일1/오류1, binary/오류 표시, readonly Diff, 전체/subset 실제 JSON파일 내용 없음, Code Compare handoff 후 CRLF 편집과 실제 원본 파일 불변, editable excludes/extension comma·whitespace·empty·case, cancel/restart·350파일/최대28 DOM, 실제 파일 Diff의 390px overflow 없음.
+- native Folder 시나리오 외부 요청/pageerror 0건. 기존 Text/JSON/Mapping/Patch 전부 회귀 통과.
+- Folder lazy chunk 약20.4KB/gzip7.7KB. 기존 main Monaco 약3.528MB/gzip920KB·TS Worker약6MB, chunk 경고 유지.
+- docs/phase6-folder-desktop.png 및 phase6-folder-mobile.png 생성·시각 검토. 이전 스크린샷은 회귀 실행으로 갱신됨.
+
+### 제약 / 다음 작업
+
+- 네이티브 FileList에는 빈 디렉터리·권한·타임스탬프·symlink 종류가 없으므로 해당 메타 비교 미지원. 폴더 drop/감시/rename detection 없음. 빈 선택은 explicit 버튼으로 지원. 최신 directory API 브라우저 필요.
+- Unicode normalize/locale casefold 없음. 경로 ignore-case는 toLowerCase. 제외는 name/subtree(디렉터리만), glob 미지원. 원문encoding/BOM은 공백 옵션으로 무시하지 않음. encoding 선택은 양쪽에 공통 적용.
+- binary 분류는 signature/NUL/control heuristic, 미판별 invalid decode는 error. binary/mixed/error에는 줄 통계 없음. Monaco 강조와 all-whitespace 분석은 별도 정책.
+- 폴더당 raw metadata20k/eligible1000/readable20MiB/per-file5MiB. 개별 oversized는 read 없이 오류 행. 전체15초 예산·취소는 file/await 경계, File.arrayBuffer와 동기Diff 즉시 강제 중단은 아님. Phase 8 Worker 성능 보장 미검증.
+- 보안 조회/새 패키지 없음. 기존 Phase 3 audit(runtime0/dev moderate10) 기록 유지. GitHub Pages·모바일 실기기·다른 browser/OS는 미검증.
+- Phase 5·6 변경은 로컬이며 커밋/푸시하지 않았다. 다음은 Phase 7 — Syntax Compare.

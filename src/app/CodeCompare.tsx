@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { DiffEditor } from '@monaco-editor/react';
+import { ManagedDiffEditor as DiffEditor } from '../components/ManagedDiffEditor';
 import type { editor } from 'monaco-editor';
 import {
   ArrowDown,
@@ -18,7 +18,13 @@ import { downloadText } from '../core/export';
 import { ChangeDetail } from '../components/ChangeDetail';
 import { detectLanguage, languages, lineCount, loadFile, MAX_BYTES } from '../core/file';
 
-export default function CodeCompare({ onJson }: { onJson: () => void }) {
+export default function CodeCompare({
+  onJson,
+  onFolder,
+}: {
+  onJson: () => void;
+  onFolder: () => void;
+}) {
   const state = useWorkspace();
   const [error, setError] = useState('');
   const [compareError, setCompareError] = useState('');
@@ -54,6 +60,8 @@ export default function CodeCompare({ onJson }: { onJson: () => void }) {
   }, [state.original.text, state.modified.text, state.options]);
   useEffect(
     () => () => {
+      uploadVersion.current.original++;
+      uploadVersion.current.modified++;
       diffEditor.current = undefined;
     },
     [],
@@ -108,9 +116,9 @@ export default function CodeCompare({ onJson }: { onJson: () => void }) {
           <div className="rail-active" title="Code Compare">
             <GitCompareArrows />
           </div>
-          <span title="Folder Compare · Phase 6 예정">
+          <button aria-label="Folder Compare 열기" title="Folder Compare" onClick={onFolder}>
             <Files />
-          </span>
+          </button>
           <button aria-label="JSON Tools 열기" title="JSON Tools" onClick={onJson}>
             <Braces />
           </button>

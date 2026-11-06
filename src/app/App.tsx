@@ -2,13 +2,22 @@ import { lazy, Suspense, useState } from 'react';
 import CodeCompare from './CodeCompare';
 const JsonWorkspace = lazy(() => import('../features/json-tools/JsonWorkspace'));
 const MappingWorkspace = lazy(() => import('../features/field-mapping/MappingWorkspace'));
+const PatchExport = lazy(() => import('../features/patch-export/PatchExport'));
+const FolderCompare = lazy(() => import('../features/folder-compare/FolderCompare'));
 export default function App() {
+  const [codeVersion, setCodeVersion] = useState(0);
   const [workspace, setWorkspace] = useState('code'),
     [jsonOpened, setJsonOpened] = useState(false),
-    [mappingOpened, setMappingOpened] = useState(false);
+    [mappingOpened, setMappingOpened] = useState(false),
+    [patchOpened, setPatchOpened] = useState(false),
+    [folderOpened, setFolderOpened] = useState(false);
   function openJson() {
     setJsonOpened(true);
     setWorkspace('json');
+  }
+  function openFolder() {
+    setFolderOpened(true);
+    setWorkspace('folder');
   }
   return (
     <>
@@ -28,10 +37,22 @@ export default function App() {
         >
           Field Mapping
         </button>
-        <span>로컬 처리 · Phase 4</span>
+        <button
+          aria-pressed={workspace === 'patch'}
+          onClick={() => {
+            setPatchOpened(true);
+            setWorkspace('patch');
+          }}
+        >
+          Patch Export
+        </button>
+        <button aria-pressed={workspace === 'folder'} onClick={openFolder}>
+          Folder Compare
+        </button>
+        <span>로컬 처리 · Phase 6</span>
       </nav>
       <div hidden={workspace !== 'code'}>
-        <CodeCompare onJson={openJson} />
+        <CodeCompare key={codeVersion} onJson={openJson} onFolder={openFolder} />
       </div>
       {jsonOpened && (
         <div hidden={workspace !== 'json'}>
@@ -44,6 +65,25 @@ export default function App() {
         <div hidden={workspace !== 'mapping'}>
           <Suspense fallback={<p className="loading">필드 매핑을 준비하고 있습니다…</p>}>
             <MappingWorkspace />
+          </Suspense>
+        </div>
+      )}
+      {patchOpened && (
+        <div hidden={workspace !== 'patch'}>
+          <Suspense fallback={<p className="loading">Patch 도구를 준비하고 있습니다…</p>}>
+            <PatchExport onCompare={() => setWorkspace('code')} />
+          </Suspense>
+        </div>
+      )}
+      {folderOpened && (
+        <div hidden={workspace !== 'folder'}>
+          <Suspense fallback={<p className="loading">폴더 비교를 준비하고 있습니다…</p>}>
+            <FolderCompare
+              onCompare={() => {
+                setCodeVersion((v) => v + 1);
+                setWorkspace('code');
+              }}
+            />
           </Suspense>
         </div>
       )}

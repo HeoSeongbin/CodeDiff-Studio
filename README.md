@@ -1,6 +1,6 @@
 # CodeDiff Studio
 
-브라우저에서 소스 코드 비교·JSON 분석·필드 매핑을 로컬로 수행하는 React + TypeScript 개발 도구. 이번 버전은 **Phase 0–4** 범위입니다. 전체 요구사항은 [PROJECT.md](PROJECT.md)를 참고하세요.
+브라우저에서 소스 코드 비교·JSON 분석·필드 매핑을 로컬로 수행하는 React + TypeScript 개발 도구. 이번 버전은 **Phase 0–6** 범위입니다. 전체 요구사항은 [PROJECT.md](PROJECT.md)를 참고하세요.
 
 ## 실행
 
@@ -28,7 +28,9 @@ npm run build
 - 바이너리·잘못된 인코딩·5 MiB 초과 업로드 오류 표시
 - JSON Editor/Formatter, 가상화 Tree Viewer, Structural Diff, JSONPath, Schema, TypeScript, JSON ↔ CSV
 - Field Mapping: 경로 선택·이름 변경·타입 변환·기본값·상수·배열·규칙 입출력
-- Code Compare / JSON Tools / Field Mapping 작업 공간 전환 및 메모리 상태 유지
+- 원문 기반 Unified Patch 생성·적용 검증·미리보기·복사·.diff/.patch 저장
+- Folder Compare: 실제 폴더 선택·상대 경로 매칭·가상 트리·파일별 Diff·통계·메타데이터 보고서
+- Code Compare / JSON Tools / Field Mapping / Patch Export / Folder Compare 작업 공간 전환 및 메모리 상태 유지
 - 한국어 Dark UI, 작은 화면 대응. 파일·코드는 외부로 전송하거나 영구 저장하지 않습니다.
 
 ## 비교 방법
@@ -43,9 +45,9 @@ Java, C#, Python, Go, Kotlin, Rust, C/C++, HTML, CSS, SCSS, JS/JSX, TS/TSX, Vue,
 
 jsdiff 원문 줄 토큰에 비교 옵션을 적용하고 실제 원문은 보존합니다. 수정은 같은 블록의 삭제·추가를 묶은 추정이며 이동 감지는 없습니다. Monaco 시각 강조와 분석 엔진은 독립적입니다. Monaco 공백 무시는 줄끝 공백 기준이며 분석 목록의 모든 공백 무시, 대소문자/EOL 옵션과 다를 수 있습니다. 빈 줄 무시 역시 분석 목록에 적용되며, 변경 상세는 원문을 표시합니다. 변경 영역 접기는 Monaco 결과 기준입니다. 화면에도 이를 안내합니다.
 
-업로드 크기 정보는 업로드 시점 바이트 수입니다. BOM 없는 UTF16은 수동 선택해야 합니다. 각 파일의 저장 (UTF-8)은 현재 편집본을 BOM 없는 UTF-8로 다운로드합니다. 비교 옵션은 저장 내용에 영향을 주지 않습니다. 편집 전에는 업로드 텍스트의 혼합 개행도 보존하며, 편집 이후 Monaco가 파일 전체 개행을 모델의 형식으로 통일할 수 있습니다. 대용량 Worker·성능 측정, Light 모드, MiniMap, Patch는 후속 단계입니다.
+업로드 크기 정보는 업로드 시점 바이트 수입니다. BOM 없는 UTF16은 수동 선택해야 합니다. 각 파일의 저장 (UTF-8)은 현재 편집본을 BOM 없는 UTF-8로 다운로드합니다. 비교 옵션은 저장 내용에 영향을 주지 않습니다. 편집 전에는 업로드 텍스트의 혼합 개행도 보존하며, 편집 이후 Monaco가 파일 전체 개행을 모델의 형식으로 통일할 수 있습니다. 대용량 Worker·성능 측정, Light 모드, MiniMap은 후속 단계입니다.
 
-Folder Compare·Syntax Compare는 아직 제공하지 않습니다. Folder 레일 아이콘은 예정 기능 표시이며 JSON Tools는 실제 작업 공간으로 연결됩니다. 배포 주소는 아직 없으며 GitHub Pages 및 Actions는 Phase 9 예정입니다. Vite base는 상대 경로로 설정했습니다.
+Syntax Compare는 아직 제공하지 않습니다. Code Compare의 Folder/JSON 레일 아이콘은 각각 실제 작업 공간으로 연결됩니다. 배포 주소는 아직 없으며 GitHub Pages 및 Actions는 Phase 9 예정입니다. Vite base는 상대 경로로 설정했습니다.
 
 ## 화면
 
@@ -107,3 +109,52 @@ Target의 중복·부모/자식 경로·wildcard/index 중첩 쓰기·컨테이�
 Phase 4 최종 검증: 단위 **161/161**, Edge E2E **12/12**, TypeScript·ESLint·Production Build 통과. 기존 Monaco 번들 경고는 유지됩니다. 다음 단계는 Phase 5 — Patch Export입니다.
 
 ![Phase 4 Field Mapping](docs/phase4-mapping-desktop.png)
+
+## Phase 5 — Patch Export 사용법
+
+Code Compare에 두 파일을 업로드하거나 코드를 편집한 뒤 상단 **Patch Export**를 선택하세요. **대상 상대 경로**, **문맥 줄**, **파일 작업**을 설정하고 **Patch 생성 및 검증**을 누릅니다. 생성한 Patch를 원본 텍스트에 적용한 결과가 수정본과 정확히 같을 때만 복사·`.diff`/`.patch` 저장이 활성화됩니다. **Patch 적용 재검증**으로 다시 검사할 수 있습니다. 검증은 메모리에서 수행하며 사용자 파일을 쓰지 않습니다.
+
+Patch는 Code Compare의 현재 Original/Modified **원문**을 사용합니다. 공백/빈 줄/대소문자/EOL 무시 등 화면 분석 옵션은 적용하지 않습니다. 서로 다른 파일명도 Rename으로 판정하지 않으며 하나의 지정 상대 경로에 `a/`·`b/` 헤더를 생성합니다. 공백·한글 경로는 지원하며, 경로 내 제어문자·따옴표·역슬래시·절대 경로·상위 경로·`.git`은 거부합니다. 대상 경로는 240자 이내입니다.
+
+- **기존 파일 수정:** 빈 텍스트도 존재하는 파일로 취급합니다. 같은 입력에는 내보낼 Patch가 없습니다.
+- **파일 생성:** Original이 비어 있어야 하며 헤더에 `/dev/null`을 사용합니다.
+- **파일 삭제:** Modified가 비어 있어야 하며 반대 헤더에 `/dev/null`을 사용합니다.
+
+빈 파일에서 존재 여부를 추정하지 않습니다. 내용 없는 파일의 생성/삭제, rename·권한·바이너리·복수 파일 Patch는 미지원입니다. 파일명은 메타데이터이며 업로드 파일은 변경하지 않습니다.
+
+메타데이터와 Patch 줄 구분은 LF, 본문 데이터의 CRLF/LF/혼합 개행과 마지막 개행 여부는 보존합니다. `\ No newline at end of file` 마커를 생성하며 단독 CR은 Patch에서 줄 구분이 아닌 내용으로 취급하므로 Code Compare 줄 번호와 다를 수 있습니다. 미리보기의 **CR 문자 표시**는 화면에만 적용됩니다. 다운로드는 UTF-8 BOM 없는 파일이며 디코딩 전 UTF-16 원본 바이트를 재현하는 도구는 아닙니다. 클립보드는 운영체제의 개행 변환 가능성이 있어 정확한 내용 보존은 파일 다운로드를 사용하세요.
+
+기본 문맥은 3줄, 선택 범위는 0–20줄입니다. 문맥 0에는 Git의 `--unidiff-zero`가 필요합니다. [Git 공식 문서](https://git-scm.com/docs/git-apply)의 적용 정책과 [GNU Unified Format](https://www.gnu.org/s/diffutils/manual/html_node/Unified-Format.html)을 확인했습니다.
+
+```sh
+git apply --check --whitespace=nowarn changes.patch
+git apply --whitespace=nowarn changes.patch
+# 문맥 0으로 생성한 경우 두 명령 모두 --unidiff-zero 추가
+```
+
+입력 파일당 5 MiB, Patch 출력 12 MiB입니다. Diff 알고리즘 timeout은 1.5초이며 전체 전처리·적용 검증의 응답시간 보장은 아닙니다. 잘못된 Unicode 서로게이트와 NUL 입력을 거부합니다. 입력·경로·문맥·작업 변경 시 이전 결과가 즉시 무효화되어 다시 생성해야 합니다.
+
+Phase 5 검증: **229/229 테스트** (실제 Git 호환성 15개 포함), **Edge E2E 15/15**, 타입·ESLint·Production Build 통과. 단위/통합 테스트 실행에는 Git CLI가 필요합니다. 임시 테스트 디렉터리만 사용하며 실제 저장소 파일에 Patch를 적용하지 않습니다. Git 2.54.0.windows.1에서 검증했고 다른 Patch 도구·실제 배포 환경은 미검증입니다. 기존 Monaco 큰 번들 경고는 유지됩니다. 다음은 Phase 6 — Folder Compare입니다.
+
+![Phase 5 Patch Export](docs/phase5-patch-desktop.png)
+
+## Phase 6 — Folder Compare 사용법
+
+상단 **Folder Compare** 또는 Code Compare 레일에서 폴더 도구를 여세요. Original/Modified **폴더 선택**으로 프로젝트 두 개를 고르고 **폴더 비교 실행**을 누릅니다. 선택 루트 폴더명은 제외하고 내부 상대 경로를 매칭하므로 `before/src/App.ts`와 `after/src/App.ts`를 비교합니다. 파일 존재 여부는 목록 기준이며 이름 변경은 삭제·추가로 표시합니다. Rename 추정은 하지 않습니다.
+
+브라우저의 [`webkitdirectory` / `webkitRelativePath`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/webkitdirectory)를 사용하며 실제 Edge에서 검증했습니다. 빈 디렉터리 자체는 FileList에 없으므로 **빈 폴더로 설정** 버튼으로 명시적 빈 입력을 사용할 수 있습니다. 폴더 Drag & Drop, 빈 디렉터리 존재/권한/타임스탬프 비교, 파일시스템 감시는 지원하지 않습니다. 최신 폴더 선택 지원 브라우저가 필요합니다.
+
+- 기본 제외는 `node_modules,.git,dist,build,target,bin,obj`. **제외 디렉터리**에서 comma로 이름 또는 루트 기준 경로를 지정합니다. 단일 이름은 어느 깊이의 디렉터리에서도, `src/generated` 같은 경로는 루트 subtree에서만 제외합니다. glob은 지원하지 않습니다. 제외된 파일의 내용은 읽지 않으며 **기본 제외 복원**을 제공합니다.
+- **확장자 필터** 예: `ts,tsx,.json,env`. 대소문자는 무시하며 비우면 확장자 없는 파일까지 포함합니다. `.env`는 env로 선택할 수 있습니다. **파일명/상대 경로 검색**, **동일 파일 숨기기**, 텍스트/바이너리/형식 변경/오류 필터는 계산 후 목록 표시만 바꿉니다.
+- **경로 대소문자 구분**을 끄면 JavaScript toLowerCase 기준으로 매칭하며 한쪽 폴더 안에서 접히는 이름이 중복되면 오류로 중단합니다. Unicode 정규화/locale 등가 매칭은 하지 않습니다. 검색·확장자는 항상 대소문자를 무시하며 디렉터리 제외는 경로 case 옵션을 따릅니다.
+- **폴더 공백 무시**는 개행 이외 공백을 무시한 Text Diff 판정을 사용합니다. 옵션에서 같아도 바이트가 다른 파일은 안내하고, EOL·인코딩·BOM 변경은 수정으로 남깁니다. 인코딩은 양쪽에 공통 선택하며 기본은 UTF-8 / UTF-16 BOM 자동 감지입니다. BOM 없는 UTF-16은 수동 선택이 필요합니다.
+- 파일 추가/삭제/수정/동일과 명시적 **ERROR_FILE**을 구분합니다. 파일 읽기·디코딩·크기·Diff 시간 초과를 동일로 표시하지 않습니다. 바이너리는 알려진 signature/NUL/제어문자로 식별하고 bytes를 비교합니다. 판별되지 않는 비정상 디코딩은 인코딩 오류입니다. binary/형식 변경/오류의 줄 통계는 `—`로 제외합니다.
+- 트리에서 파일을 클릭하면 읽기 전용 Monaco 좌우/Unified Diff와 실제 경로·크기·인코딩을 확인합니다. 폴더 펼침/접기와 가상 행(최대 28 DOM)을 사용합니다. 파일→디렉터리 전환에서는 이전 파일과 새 디렉터리 subtree를 모두 선택할 수 있습니다.
+- **Code Compare로 복사**는 현재 두 코드 입력을 선택 파일로 명시적으로 교체합니다. 없는 쪽은 빈 입력이며, 새로운 모델로 EOL을 감지합니다. 이후 편집은 메모리 상태만 바꾸며 업로드 원본·폴더 snapshot을 수정하지 않습니다. Monaco 시각 강조와 모든 공백 무시 통계는 다른 정책일 수 있습니다.
+- **전체 결과 JSON 저장** / **표시 목록 JSON 저장**은 파일 내용 없이 경로·상태·메타데이터·줄 통계·옵션을 내보냅니다. `statsScope: all-compared-files`와 전체 통계를 유지하고 `exportedRows`와 files로 실제 내보낸 subset을 표시합니다. 검색 필터는 전체 통계를 바꾸지 않습니다.
+
+폴더 선택/비교 옵션 변경 시 이전 결과와 저장을 즉시 무효화합니다. 비교 중 진행률·취소를 지원하며 오래된 요청은 무시하고 이전 결과 메모리를 해제합니다. File.arrayBuffer 읽기와 각 파일의 동기 Diff는 즉시 중단할 수 없어 취소·전체 15초 예산은 파일/await 경계에서 확인합니다. 입력은 폴더당 필터 전 메타데이터 20,000개, 필터 후 파일 1,000개, 읽을 파일 합계 20 MiB, 파일당 5 MiB를 보호 한도로 둡니다. 초과 단일 파일은 읽지 않고 오류 행으로 표시하며, 초과 eligible 합계/경로 충돌은 전체 비교를 중단합니다. 이는 Phase 8 성능 측정을 대신하는 지연시간 보장이 아닙니다.
+
+최종 Phase 6 검증: **271/271 테스트**, **Edge E2E 18/18**, TypeScript·ESLint·Production Build 통과. 네이티브 폴더 선택, 오류·binary·삭제/추가·case·기본 제외·300/350 파일 비교·가상 DOM·취소·실제 결과 다운로드·원본 파일 불변·390px 화면을 검증했습니다. 기존 Monaco 큰 chunk 경고가 남아 있으며 새 외부 의존성은 없습니다. 다음은 Phase 7 — Syntax Compare입니다.
+
+![Phase 6 Folder Compare](docs/phase6-folder-desktop.png)

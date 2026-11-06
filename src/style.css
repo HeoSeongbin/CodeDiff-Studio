@@ -1229,3 +1229,481 @@ footer {
     max-height: 700px;
   }
 }
+.patch-workspace {
+  padding: 30px;
+  max-width: 1600px;
+  margin: auto;
+}
+.patch-inputs,
+.patch-preview,
+.patch-notes {
+  border: 1px solid #303744;
+  border-radius: 8px;
+  padding: 20px;
+  background: #161b22;
+  margin-bottom: 20px;
+  min-width: 0;
+}
+.patch-workspace h2 {
+  font-size: 15px;
+  color: #e1e4eb;
+  margin: 0 0 15px;
+}
+.patch-files {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.patch-files > div {
+  border: 1px solid #303744;
+  border-radius: 5px;
+  padding: 14px;
+  background: #101318;
+  min-width: 0;
+}
+.patch-files span,
+.patch-files small {
+  display: block;
+  color: #8d99aa;
+  font-size: 10px;
+}
+.patch-files b {
+  display: block;
+  font-weight: 500;
+  font-size: 13px;
+  margin: 8px 0;
+  color: #d8dceb;
+  overflow-wrap: anywhere;
+}
+.patch-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+.patch-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 11px;
+  color: #9faabd;
+  min-width: 0;
+}
+.patch-controls label:first-child {
+  flex: 1;
+  min-width: 160px;
+}
+.patch-controls input {
+  background: #101318;
+  color: #d1d6e0;
+  border: 1px solid #343b49;
+  border-radius: 5px;
+  padding: 9px;
+  font:
+    12px Consolas,
+    monospace;
+  width: 100%;
+}
+.patch-controls select {
+  padding: 9px;
+  max-width: 100%;
+}
+.patch-controls button {
+  font-size: 11px;
+}
+.generate-patch {
+  border-color: #877bd1;
+  background: #302c49;
+}
+.patch-verified {
+  color: #8bd4aa;
+  font-size: 12px;
+  margin: 10px 0;
+}
+.patch-stats {
+  display: flex;
+  gap: 20px;
+  font-size: 11px;
+  color: #9aabbe;
+  margin: 15px 0;
+  flex-wrap: wrap;
+}
+.patch-text {
+  background: #101318;
+  color: #c6d2e4;
+  border: 1px solid #303744;
+  padding: 20px;
+  margin-top: 16px;
+  white-space: pre;
+  overflow: auto;
+  max-height: 560px;
+  font:
+    12px/1.8 Consolas,
+    monospace;
+  tab-size: 4;
+}
+.patch-empty {
+  padding: 30px;
+  border: 1px dashed #3b4051;
+  border-radius: 5px;
+}
+.patch-notes p {
+  font-size: 11px;
+  margin: 10px 0;
+}
+.patch-notes code {
+  display: block;
+  background: #101318;
+  padding: 12px;
+  color: #b7abe9;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+.patch-error {
+  white-space: pre-wrap;
+  margin-bottom: 20px;
+}
+.patch-preview .tool-heading button {
+  font-size: 11px;
+  padding: 8px;
+}
+.patch-preview .tool-actions label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 11px;
+}
+@media (max-width: 800px) {
+  .patch-workspace {
+    padding: 16px;
+  }
+  .patch-workspace .workspace-heading {
+    flex-wrap: wrap;
+  }
+  .patch-workspace h1 {
+    font-size: 21px;
+    word-break: keep-all;
+  }
+  .patch-workspace .workspace-heading button {
+    font-size: 11px;
+  }
+  .patch-inputs,
+  .patch-preview,
+  .patch-notes {
+    padding: 14px;
+  }
+  .patch-files {
+    grid-template-columns: 1fr;
+  }
+  .patch-controls {
+    align-items: stretch;
+  }
+  .patch-controls > label,
+  .patch-controls > button {
+    width: 100%;
+  }
+  .patch-text {
+    padding: 12px;
+    font-size: 11px;
+  }
+}
+.folder-workspace {
+  padding: 30px;
+  max-width: 1800px;
+  margin: auto;
+}
+.folder-setup,
+.folder-summary,
+.folder-tree-panel,
+.folder-file-panel {
+  padding: 18px;
+  border: 1px solid #303744;
+  border-radius: 8px;
+  background: #161b22;
+  margin-bottom: 20px;
+  min-width: 0;
+}
+.folder-pickers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.folder-pickers > div {
+  padding: 16px;
+  background: #101318;
+  border: 1px solid #303744;
+  border-radius: 6px;
+  min-width: 0;
+}
+.folder-pickers span,
+.folder-pickers small {
+  display: block;
+  font-size: 10px;
+  color: #8e9bb0;
+}
+.folder-pickers b {
+  display: block;
+  font-size: 15px;
+  color: #d6dbea;
+  margin: 10px 0;
+  overflow-wrap: anywhere;
+}
+.folder-pickers button {
+  font-size: 10px;
+}
+.folder-pickers .upload {
+  margin: 0;
+}
+.folder-options {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin: 20px 0;
+}
+.folder-options label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 10px;
+  color: #9caac0;
+  min-width: 0;
+}
+.folder-options label:first-child {
+  flex: 2;
+  min-width: 180px;
+}
+.folder-options input:not([type='checkbox']),
+.folder-search {
+  padding: 9px;
+  border: 1px solid #343b49;
+  border-radius: 4px;
+  background: #101318;
+  color: #d0d7e4;
+  font:
+    12px Consolas,
+    monospace;
+  max-width: 100%;
+}
+.folder-options .inline-option {
+  flex-direction: row;
+  align-items: center;
+}
+.folder-options button {
+  font-size: 10px;
+}
+.folder-setup > p {
+  font-size: 11px;
+}
+.folder-summary {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.folder-summary > div {
+  padding: 12px 18px;
+  border: 1px solid #303744;
+  border-radius: 5px;
+  min-width: 100px;
+  background: #101318;
+  flex: 1;
+}
+.folder-summary strong {
+  display: block;
+  color: #a5c9b9;
+  font:
+    24px Consolas,
+    monospace;
+}
+.folder-summary span {
+  display: block;
+  font-size: 10px;
+  color: #8f9cb0;
+  margin-top: 6px;
+}
+.folder-summary > p {
+  width: 100%;
+  font-size: 11px;
+}
+.folder-progress {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+.folder-progress progress {
+  accent-color: #9686df;
+}
+.folder-results {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.8fr);
+  gap: 18px;
+}
+.folder-results h2 {
+  font-size: 15px;
+  color: #d6ddeb;
+  overflow-wrap: anywhere;
+}
+.folder-search {
+  width: 100%;
+  margin: 10px 0;
+}
+.folder-tree-panel .tool-actions {
+  gap: 7px;
+}
+.folder-tree-panel .tool-actions button {
+  font-size: 9px;
+  padding: 6px;
+}
+.folder-tree-panel .tool-actions label {
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.folder-tree-panel > p {
+  font-size: 10px;
+}
+.folder-tree-view {
+  height: 510px;
+  background: #101318;
+  border: 1px solid #303744;
+  overflow: auto;
+  margin: 15px 0;
+}
+.folder-tree-row {
+  border-bottom: 1px solid #202732;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.folder-tree-row.selected {
+  background: #2c2844;
+}
+.folder-tree-row > button {
+  width: 100%;
+  border: 0;
+  background: none;
+  border-radius: 0;
+  padding: 6px 4px;
+  text-align: left;
+  display: flex;
+  gap: 7px;
+  justify-content: flex-start;
+  font:
+    11px Consolas,
+    monospace;
+  min-width: 0;
+}
+.folder-tree-row b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 400;
+  flex: 1;
+  min-width: 0;
+}
+.folder-tree-row small {
+  font-size: 9px;
+  color: #8b99ac;
+  white-space: nowrap;
+}
+.folder-tree-row em {
+  font-style: normal;
+  font-size: 9px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: #27303d;
+  color: #a4b4c9;
+}
+.folder-tree-row .added_file {
+  color: #86cba1;
+}
+.folder-tree-row .removed_file,
+.folder-tree-row .error_file {
+  color: #e39ba9;
+}
+.folder-tree-row .modified_file {
+  color: #bba6ef;
+}
+.folder-file-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 10px;
+  color: #8e9cb0;
+  overflow-wrap: anywhere;
+}
+.folder-file-meta p {
+  font-size: 11px;
+}
+.folder-diff-editor {
+  height: 560px;
+  border: 1px solid #303744;
+  margin: 12px 0;
+}
+.folder-no-diff,
+.folder-empty {
+  border: 1px dashed #424556;
+  border-radius: 6px;
+  padding: 30px;
+  margin: 20px 0;
+  color: #a8a1b9;
+  font-size: 12px;
+}
+.folder-note {
+  font-size: 10px;
+}
+.folder-file-panel .tool-heading {
+  align-items: flex-start;
+}
+.folder-file-panel .tool-heading button {
+  font-size: 10px;
+}
+.folder-error {
+  white-space: pre-wrap;
+}
+@media (max-width: 1000px) {
+  .folder-results {
+    grid-template-columns: 1fr;
+  }
+  .folder-tree-view {
+    height: 340px;
+  }
+}
+@media (max-width: 800px) {
+  .folder-workspace {
+    padding: 16px;
+  }
+  .folder-workspace .workspace-heading {
+    flex-wrap: wrap;
+  }
+  .folder-workspace h1 {
+    font-size: 21px;
+    word-break: keep-all;
+  }
+  .folder-workspace .workspace-heading button {
+    font-size: 11px;
+  }
+  .folder-pickers {
+    grid-template-columns: 1fr;
+  }
+  .folder-options {
+    align-items: stretch;
+  }
+  .folder-options > label,
+  .folder-options > button {
+    width: 100%;
+  }
+  .folder-setup,
+  .folder-tree-panel,
+  .folder-file-panel {
+    padding: 12px;
+  }
+  .folder-diff-editor {
+    height: 420px;
+  }
+}

@@ -121,3 +121,46 @@
 - 예산: rule 100, path 500자/80 segments/index<30000, source/target/rules document 1 MiB·30k JSON 값/깊이80, 탐색200k. 기본값/상수·Source 유효성 및 clone 예산 검사. Worker 성능은 Phase 8.
 - 장단점: 모호한 데이터 손실과 오래된 preview 저장을 차단 / 제한된 타입 변환·날짜·배열 정책을 사용자가 따라야 함.
 - 영향·검증: engine/drafts, mappingWorkspace store, UI·Mapping 87 unit/3 E2E. 신규 의존성 없음. 엄격 boolean/date·위험 경로·원문 및 실제 파일 다운로드·import 왕복·budget 검증.
+
+## ADR-013 · 2026-11-06 · 원문 기반 Unified Patch와 검증
+
+- 문제: 화면의 정규화 Diff를 Patch로 사용하면 공백·EOL·EOF 변경을 잃을 수 있다.
+- 대안: UI hunk 직렬화, 자체 Patch serializer, jsdiff 원문 생성 + 독립 적용 검사.
+- 선택: 기존 diff 패키지의 createTwoFilesPatch에 원문과 문맥만 전달하고 ignoreWhitespace:false/stripTrailingCr:false/timeout1500. 반환 문자열을 parsePatch 후 applyPatch(autoConvertLineEndings:false,fuzzFactor:0)하여 수정본과 완전 일치 검사. 성공한 문자열만 preview/copy/download에 제공.
+- 이유: 조작 없는 원문 기준 결과·EOF 범위·개행 보존. 자동 EOL 변환은 CRLF→LF 자체 변경을 숨길 수 있어 금지. formatPatch의 zero-line range mutation을 반복 호출하지 않도록 한 번 생성한 문자열을 그대로 사용.
+- 표준 검토: [GNU Unified Format](https://www.gnu.org/s/diffutils/manual/html_node/Unified-Format.html), [Git apply](https://git-scm.com/docs/git-apply). 파일 헤더·@@ 범위·EOF 마커, metadata LF 및 원문 CR 데이터 보존. CR-only 텍스트는 LF 관점의 한 줄 데이터이며 Text Diff 줄 번호와 다를 수 있음.
+- 장단점: 재현 가능한 text patch / 모든 외부 Patch 구현 호환성 보장은 아님. Git 호환성은 실제 CLI 적용 후 bytes로 검증. context0은 --unidiff-zero 안내.
+- 영향: core/patch/patch.ts, PatchExport UI, patch core/Git/E2E. 기존 Text Diff·JSON·Mapping 엔진과 분리.
+
+## ADR-014 · 2026-11-06 · 파일 메타데이터·Export 상태와 제한
+
+- 문제: 다른 업로드 파일명·빈 입력·위험 경로와 오래된 결과의 의미를 명확하게 해야 한다.
+- 대안: 자동 rename/creation 추정, 독립 old/new 이름, 단일 대상 상대 경로와 명시적 파일 작업.
+- 선택: 단일 대상 상대 경로에 a/b prefix, 공백 경로 quote, 한글 허용. 경로 240자·절대/상위/.git/빈 segment·제어문자·역슬래시·따옴표·비호환 문자 거부. 입력 UTF-8 왕복 검사·NUL 차단.
+- 작업: modify 기본으로 empty와 absent 구분. create는 Original empty, delete는 Modified empty 및 /dev/null. 양쪽 empty의 파일 생성/삭제는 미지원으로 명시. rename·permission·binary·multi-file은 범위 밖.
+- UI: 별도 lazy Patch Export가 Code Compare 원문 스토어를 읽는다. 사용자 명시 생성 후 자동 적용 검사. snapshot과 raw strings/path/context/operation 일치할 때만 export. 예약 작업은 요청 세대로 취소. 분석 옵션과 CR 표시 옵션은 Patch 데이터를 바꾸지 않음.
+- 출력: UTF-8 BOM 없이 저장, clipboard는 명시 동작이며 OS EOL 변환 경고. UTF16 원본 bytes 복원은 아님. 입력각5MiB/출력12MiB/Diff timeout1.5s; 전체 main-thread 파이프라인 성능 보장 아님.
+- 장단점: 안전한 검토/내보내기와 메타데이터 의미 명확 / 단일 텍스트 Patch subset 및 portable 경로 subset만 지원.
+- 영향·검증: Patch input/types, App navigation/CSS, core53/Git15/E2E3. 임시 Git fixture 디렉터리는 tmpdir 아래 생성된 절대 경로를 확인하고 해당 경로만 정리. 신규 패키지 없음.
+
+## ADR-015 · 2026-11-06 · 폴더 입력·상대 경로·옵션과 정확성
+
+- 문제: 프로젝트 폴더의 내용을 기존 Text/JSON/Mapping/Patch와 혼합하지 않고 비교해야 한다.
+- 대안: File System Access API 전용, backend archive, browser directory FileList + 독립 엔진.
+- 선택: webkitdirectory/File.webkitRelativePath로 받은 루트 내부 경로를 검증·strip하고 FolderSelection으로 보관. [MDN API 설명](https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/webkitdirectory)을 확인하고 실제 Edge에서 검증. empty dir 자체는 FileList에 없으므로 명시적 empty selection 버튼 제공.
+- 경로: slash relative·no empty/dot/dotdot/control/backslash/drive, 최대1024자/80segments. Map 키와 caseSensitive/default 또는 toLowerCase 매칭. Unicode normalization 없음. 동일 side case collision은 전체 오류. 파일명 이동은 추가/삭제, root 이름 차이는 비교하지 않음.
+- 필터: 기본 제외 디렉터리는 내용 읽기 전 적용. name any-depth 또는 root subtree로 한정, glob 없음. 확장자 insensitive, 검색·kind·unchanged 숨김은 결과 표시 필터. whole stats와 exported subset 구분.
+- 정확성: 텍스트는 기존 compareText(ignoreEol:false), byte-equal fast path. 공백 의미상 동일은 rawEqual과 구분해 안내. BOM/encoding 변경은 수정. binary는 signature/control heuristic + raw byte equality. IO/encoding/oversized/diff failure는 ERROR_FILE, unavailable line counts. Added/Removed empty file과 absent를 구분.
+- 장단점: 정적/local/privacy 유지·검증 가능한 상태 / empty directories, metadata 권한/mtime·rename·drop·watch는 범위 밖. binary heuristic과 API 지원 한계 명시.
+- 영향: core/folder engine/tree, folderWorkspace store, UI·App navigation. Folder42 unit/3 E2E + 기존 전부 회귀 검증.
+
+## ADR-016 · 2026-11-06 · 폴더 비동기 처리·모델 수명·보고서
+
+- 문제: 다수 파일 처리·취소·stale 결과와 Monaco model teardown 오류를 제어해야 한다.
+- 대안: 모든 bytes 동시 로딩, 별도 diff 구현, pair별 읽기/비교와 기존 Monaco 재사용.
+- 선택: pair별 arrayBuffer 읽기 → classify/decode → bytes/text diff → progress/yield. raw bytes는 result에 보관하지 않고 text와 metadata만 유지. snapshot은 selection refs/options identity와 결합, request version·AbortSignal으로 오래된 결과 차단하고 입력 변경 시 이전 result 해제.
+- 보호 예산: per side20k raw metadata/1000eligible/readable20MiB, per-file5MiB, whole15s(file/await checkpoints). binary/error 줄 수는 제외, unknown을 동일로 처리하지 않는다. File.arrayBuffer와 동기Diff 강제 중단은 Phase 8 검토.
+- 모델: readonly folder preview는 Code Compare state를 바꾸지 않음. 명시적 가져오기는 두 입력을 교체하고 CodeCompare를 새로 mount해 EOL 감지. ManagedDiffEditor layout cleanup에서 setModel(null) 후 model.dispose하여 wrapper passive cleanup의 dispose-before-detach pageerror 해결. CodeCompare pending uploads도 unmount 시 무효화.
+- 트리/보고서: virtual28rows, Map으로 file/dir 이중 경로를 별도 행 표시. 전체·subset JSON은 콘텐츠를 배제하고 statsScope/all-compared-files·exportedRows를 명시. export는 사용자 클릭만.
+- 장단점: 기본 반응성·메모리와 입력 불변성 유지 / main-thread pipeline이며 hard latency·메모리 보장은 아니다. viewport readonly 강조와 통계 정책이 다를 수 있음.
+- 영향·검증: FolderCompare/ManagedDiffEditor/CodeCompare/App + engine/tree, native directory fixture·cancel·350files·pageerror0·실제 다운로드·원본 파일 불변/CRLF 손실 없음. 신규 패키지 없음.

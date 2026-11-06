@@ -32,3 +32,19 @@ DiffLine은 원문, 원본/수정 줄 번호와 added/removed 연산을 보유�
 `stores/mappingWorkspace.ts`는 Source 문자열·규칙 draft를 별도 세션 메모리에 보관한다. `features/field-mapping/MappingWorkspace.tsx`는 Source Monaco·가상 트리, 규칙 카드, Target JSON·트리의 반응형 3열 UI다. App의 지연 로딩 boundary로 연결하며 이전 workspace를 보존한다.
 
 입력 변경 → Source 파싱 + draft/규칙 검증 → 250ms debounce → 엔진 → 성공 시 독립 Target 또는 오류 목록. 결과는 Source 문자열과 규칙 참조 snapshot에 결합되어 값이 바뀌는 render부터 이전 결과를 사용하지 않는다. 실패한 import는 상태에 적용되지 않는다. 버튼 클릭으로만 clipboard·파일 다운로드를 수행한다. 업로드 결과는 입력별 요청 세대를 확인한다.
+
+## Phase 5 — Patch Export
+
+`core/patch/patch.ts`는 경로·입력 유효성, 원문 Unified Patch 생성, 적용 결과 검증을 담당한다. Text Diff normalizer의 hunks나 옵션을 입력받지 않는다. jsdiff 원문 serializer → Patch 문자열 parse/apply → 예상 수정본 exact match가 출력의 기준이다. auto EOL conversion을 끄고 메타데이터 LF/본문 CR을 구분한다.
+
+`features/patch-export/PatchExport.tsx`는 Code Compare 스토어의 원문 문자열을 구독하고 경로·문맥·파일 작업을 선택한다. App lazy boundary로 제공하며 기존 작업 공간 상태를 유지한다. 생성 snapshot과 현재 입력이 다르면 표시/복사/저장을 차단한다. 원문은 편집하지 않고 메모리 내 적용 검사만 수행한다. 파일 다운로드는 기존 UTF-8 유틸을 사용한다.
+
+테스트 경계: 코어 roundtrip과 손상 거부, 외부 Git CLI 임시 fixture 적용 및 bytes 검증, 브라우저 실제 다운로드/입력 변경/회귀. 외부 서버나 사용자 디스크 파일 적용 기능은 추가하지 않았다.
+
+## Phase 6 — Folder Compare
+
+`core/folder/engine.ts`는 native FileList→selection 변환, 경로/옵션/예산 preflight, 읽기 전 제외/extension, 상대 경로 Map 매칭, sequential pair read·decode·bytes/text 비교, status/통계/report를 담당한다. 기존 text comparator만 호출하며 JSON의 구조 의미론·Mapping·Patch를 사용하지 않는다. Raw bytes는 pair 처리 후 버리고 report는 content를 제외한다.
+
+`core/folder/tree.ts`는 결과 subset에서 Map hierarchy를 만들고 collapse 상태를 flat virtual rows로 변환한다. 동일 path가 old file/new directory일 때 directory row와 file row를 동시에 남긴다. `stores/folderWorkspace.ts`는 선택 File refs와 옵션만 메모리에 보관한다. `FolderCompare.tsx`는 lazy workspace, progress/cancel·snapshot·virtual28rows·readonly selected Diff·export를 담당한다.
+
+`components/ManagedDiffEditor.tsx`는 parent layout cleanup에서 editor의 model을 분리하고 해제하여 React wrapper의 passive cleanup 순서 문제를 방지한다. CodeCompare와 Folder preview 양쪽에서 사용한다. 폴더 결과는 자동으로 전역 코드 입력을 덮어쓰지 않으며 명시적인 Code Compare 복사 버튼으로만 handoff한다. 그때 기존 편집 모델을 재생성해 원문 EOL을 감지한다.
