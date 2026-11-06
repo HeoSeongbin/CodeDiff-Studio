@@ -4,7 +4,7 @@
 
 ## 현재 Phase
 
-Phase 2 구현·검증 완료. 다음 개발은 Phase 3 — JSON Tools. 이번 세션은 Phase 2 범위에서 종료한다. 아래 Phase 1 기록은 이전 세션 이력이며, 최신 검증 결과는 하단 Phase 2 기록을 기준으로 한다.
+Phase 4 — Field Mapping 구현·검증 완료. 다음 단계는 Phase 5 — Patch Export. 이번 세션은 Phase 4 범위에서 종료한다. 이전 Phase 기록은 당시 이력이며, 최신 상태는 하단 Phase 4 기록을 기준으로 한다.
 
 ## 완료 작업
 
@@ -41,14 +41,14 @@ Phase 2 구현·검증 완료. 다음 개발은 Phase 3 — JSON Tools. 이번 �
 - Monaco 시각 diff와 jsdiff 분석 목록은 독립 엔진. 모든 공백/대소문자/EOL 옵션 결과가 Monaco 강조와 다를 수 있어 화면 및 README에 안내.
 - npm audit: dev-only minimatch 전이 의존성에 moderate 10건 남음. 호환 범위 audit fix로 해결되지 않음. 무리한 강제 downgrade/override는 하지 않았으며 후속 의존성 업데이트 필요. critical/high 0건.
 - Worker 기반 Text Diff 계산·취소·대용량 성능 검증은 Phase 8. 현재 main-thread 250ms debounce, 1.5초 계산 timeout. 5 MiB는 측정된 성능 보장이 아닌 임시 상한.
-- Light 테마, MiniMap, JSON Tools, Field Mapping, Patch, Folder, AST, 배포는 미구현. Unified와 코드 다운로드는 Phase 2에서 구현했다.
-- Git 저장소 미초기화. 커밋·원격 연결·배포 수행 안 함.
+- Light 테마, MiniMap, Patch, Folder, AST, 배포는 미구현. Field Mapping은 Phase 4에서 구현했다. JSON Tools는 Phase 3에서 구현했다. Unified와 코드 다운로드는 Phase 2에서 구현했다.
+- Git 저장소는 Phase 2 이후 초기화 및 origin/main 연결·푸시 완료 (f551ae7). 배포는 미수행. 아래 Phase 1·2의 Git 미초기화 표기는 당시 이력이다.
 - E2E 실행 환경은 Edge 필요. 다른 OS는 playwright.config.ts의 channel 변경 또는 Chromium 설치 필요.
 - 배포 환경 및 모바일 실기기 미검증.
 
 ## 다음 작업
 
-Phase 3에서 독립 JSON Tools 엔진·화면과 테스트를 구현한다. 시작 전 PROJECT/PROGRESS/DECISIONS와 Git 상태를 재확인한다. Text Diff에 JSON 의미론을 혼합하지 않는다.
+다음 세션은 Phase 5에서 원문 기반 Unified Patch 생성·미리보기·다운로드와 적용 검증을 구현한다. 비교 옵션으로 정규화한 결과를 Patch 원문으로 사용하지 않는다. 시작 전 필수 문서와 Git 상태를 확인한다.
 
 ## Phase 2 · 2026-11-06 · 이번 세션
 
@@ -90,3 +90,97 @@ AGENTS, PROJECT, PROGRESS, DECISIONS, README 및 실제 소스·테스트를 확
 - 대용량 main-thread 제한, MiniMap, Light 및 성능 측정은 후속 Phase. Monaco DiffEditor가 minimap을 내부적으로 비활성화하므로 작동하지 않는 토글은 제공하지 않았다.
 - 의존성 변경 없음. 이전 보안 조회의 dev-only moderate 경고 10건은 이 세션에서 재조회하지 않았다.
 - JSON/Mapping/Patch/Folder/AST/배포 미착수. 현재 진행 중 작업 없음. 다음은 Phase 3.
+
+## Phase 3 · 2026-11-06 · JSON Tools
+
+### 시작 상태 대조
+
+AGENTS/PROJECT/PROGRESS/DECISIONS/README와 소스·테스트를 확인했다. main은 origin/main과 동기화된 clean 상태였으며 f551ae7까지 커밋되어 있었다. 문서의 Git 미초기화 기록은 과거 상태이므로 최신 상태를 보정했다. 기존 단위 20개·타입·ESLint가 통과했다.
+
+### 완료 기능
+
+- Code Compare를 app/CodeCompare.tsx로 분리하고 App에 작업 공간 전환 추가. 기존 컴포넌트를 유지하여 편집/보기 상태 보존. JSON 작업 공간 지연 로딩.
+- 표준 JSON Monaco Editor, 파일 업로드·직접 입력·실시간 오류, Pretty/Minify/Key Sorting·들여쓰기·복사·다운로드.
+- 별도 JSON 값 타입·파싱·숫자 정밀도/입력 예산 검사. 1 MiB, 30k 값, 깊이 80의 보수적 임시 제한.
+- Tree Viewer: 타입·경로·노드 선택·Key/Value 검색·전체/깊이 펼침·접기·경로와 값 복사. 가상화로 DOM 최대 24행.
+- 자체 index 기반 Structural Diff: Key 순서 무시, null/필드 부재·타입 구분, 배열 길이 요약과 상세 필드 변경 분리, 좌우 트리·강조·통계·이전/다음·변경 필터.
+- JSONPath-Plus eval:false와 허용 문법 검증. 특수문자 Key의 복사 경로 직접 해석. 필터/코드 평가 금지, 재귀 한 번/표현식 500자 제한. 결과 경로·값·복사·저장·트리 선택.
+- Schema Draft-07 추론, Ajv 검증·오류 위치, required·nullable·중첩·혼합 배열, 직접 편집/파일·복사·저장. 외부 참조 요청 및 데이터 강제변환 없음.
+- 자체 TypeScript 생성: 타입명·interface/alias·export·중첩·optional/nullable/union·empty unknown[], 복사·다운로드. 예약어·충돌 이름 처리.
+- Papa Parse CSV ↔ JSON: 컬럼 선택·선택 순서·JSON Pointer Flatten, 파일/직접 입력, 구분자·타입 추론, 미리보기·저장, 수식 접두사 방어.
+- 결과 변경 시 오래된 결과 무효화, 변경/검색 결과 100건 페이지, 입력별 업로드 요청 세대 관리.
+
+### 발견·해결 문제
+
+- JSONPath slice step 0과 반복 재귀의 결과 증폭을 명시적으로 거부.
+- 특수문자 Key의 JSONPath 라이브러리 표기 차이는 canonical JSON-escaped bracket 경로의 자체 own-property 해석으로 왕복 검증.
+- 단일 컬럼 빈 CSV 값이 skipEmptyLines로 사라지는 문제: 빈 셀 인용과 마지막 개행에서 생긴 가상 행만 제거하도록 수정.
+- 배열 길이 요약을 트리 강조에 포함하면 미변경 형제도 강조되던 문제: 상세 변경 경로만 필터 기준으로 사용.
+- Ajv strictRequired는 표준상 유효한 required-only 속성을 거부하므로 해당 옵션만 false. 다른 strict 검증은 유지.
+- 테스트 alert 선택자는 Monaco 접근성 alert와 구분되도록 보정. 테스트의 TypeScript 객체 추론 문제 및 escape lint 오류도 해결.
+
+### 검증
+
+- npm test: 74/74 통과 (기존 20 + JSON 54).
+- npm run typecheck / npm run lint: 통과.
+- npm run build: 통과. JSON 지연 chunk 약 198.7 KB / gzip 64.7 KB. 기존 Monaco 큰 chunk 경고 유지 (main 약 3.526 MB / gzip 919.5 KB, TS Worker 약 6 MB).
+- 전체 Edge Playwright 9/9 통과 (기존 5 + 신규 4), 테스트 포트 5193.
+- 가상 트리 15,002노드 중 24행 DOM, 검색/경로 클릭 선택, 구조 변경/변경 필터, 직접 타이핑 오류·undo, workspace 보존, 정밀도 차단과 원문 실제 다운로드, Schema valid/invalid, 타입 생성·예약어 오류·실제 ts 다운로드, CSV Flatten·추론·수식 방어·실제 CSV 다운로드·파일 업로드, 100건 결과 페이지, 390px 화면을 검증.
+- 단위: 원시 JSON/EOF 오류·프로토타입 키·배열/타입/null/부재·원문 불변·안전경로·Schema·생성 타입의 TS semantic 검사·CSV 따옴표/개행/빈값/중복 Header/큰 수 등.
+- 외부 요청 감시 0건, pageerror 없음. Monaco JSON 외부 Schema 요청을 false로 명시.
+- npm audit --omit=dev: 런타임 취약점 0건. 설치 시 전체 audit는 기존 개발 의존성 moderate 10건, critical/high 0건.
+- phase3-json-diff.png, phase3-json-mobile.png 시각 검토. 기존 Phase 1·2 스크린샷은 회귀 실행으로 재생성됨.
+
+### 제약 / 다음 단계
+
+- JSONPath는 의도적으로 제한된 문법. 필터·스크립트·union 미지원, 재귀 한 번만 허용. Key 기반 배열 매칭은 후속 확장으로 미구현.
+- Schema는 샘플 추론 Draft-07. format 검증과 외부 refs는 미지원. 타입명은 ASCII 식별자만 허용. 타입은 샘플 초안이다.
+- JSON.parse 중복 Key는 마지막 값, 소수는 IEEE 754 정밀도. 안전 정수 범위 밖 정수는 차단한다. CSV 타입·중첩의 무손실 왕복은 보장하지 않는다.
+- JSON 계산은 main-thread이며 Worker 성능·취소 검증은 Phase 8. 현재 입력 제한은 측정된 처리시간 보장이 아니다. 실기기·실제 GitHub Pages는 미검증.
+- 이번 세션 커밋·푸시는 수행하지 않음. Phase 4 이후 기능은 미착수. 다음은 Phase 4 — Field Mapping.
+
+## Phase 4 · 2026-11-06 · Field Mapping
+
+### 시작 상태 대조
+
+필수 5개 문서, PROJECT의 Mapping 요구사항, 기존 코드와 Git 상태를 확인했다. Phase 3 미커밋 변경사항이 있는 main 상태로 시작했으며 해당 변경을 보존했다. 기존 단위 74개·TypeScript·ESLint 통과 후 Phase 4만 구현했다.
+
+### 완료 작업
+
+- Field Mapping 지연 로딩 작업 공간과 별도 Zustand 스토어. Source 편집/업로드·가상 트리, 중앙 규칙 카드, Target JSON·트리의 3열 레이아웃과 반응형 지원.
+- Source 경로 선택·활성 규칙에 적용/추가, Target 경로·필드명·중첩 구조, copy/string/number/boolean/date/constant, 누락 기본값·누락 제외·규칙 적용 해제·추가/삭제.
+- 배열 전체 copy·명시적 index·Source/Target 각 1개의 [*] 매핑. index 유지·빈 배열 지원, 희소 배열 거부. 날짜는 명시적 UTC 정책으로 결정적 출력.
+- 경로 문법/위험 segment 검증, own-property 탐색, 중복/부모-자식/wildcard-index 겹침과 객체/배열 형식 충돌 사전 검사. 기본값은 누락에만 적용하며 null과 falsey 값 구분.
+- 오류 발생 시 전체 결과 취소·규칙별 메시지. 최신 Source 문자열과 규칙 배열을 계산 snapshot에 결합하여 입력이 바뀐 render부터 이전 결과 무효화.
+- 결과 복사·실제 UTF-8 다운로드, Source 원문 저장, 규칙 버전 1 문서 및 배열 import, 규칙 export/copy. 실패한 import는 기존 규칙을 보존. 수동 JSON 텍스트와 파일 모두 지원.
+- Source/규칙 업로드 요청 세대 별도 관리, 예제 입력 시 대기 업로드 무효화. 메모리 세션 상태 유지, storage/서버 전송/입력 코드 실행 없음.
+- 신규 의존성 없음. 기존 JsonTree·파일 loader·UTF-8 다운로드를 재사용하고 Text Diff/Structural Diff 모듈은 변경하지 않음.
+
+### 발견·해결 문제
+
+- 실행 예산 재귀 인자를 추가하는 초기 구현의 인자 누락을 단위/타입 검사에서 발견하고 수정. 전체 예산 공유·초과 차단 검증.
+- CSV/JSON 코어와 동일하게 큰 수·non-finite·출력 값 수/깊이/크기 제한 적용. 출력 배열 hole을 JSON.stringify가 null로 바꾸기 전에 거부.
+- 동일 배열 형제 필드 매핑 시 배열 prefix는 재사용하지만, 단일 Target 중복 쓰기는 금지. missing collection과 empty collection 구분.
+- 규칙을 내보낸 뒤 같은 예산으로 다시 가져올 수 없던 큰 합성 문서 문제를 예방하기 위해 export에도 import 예산 검증 적용.
+- 전체 오류 수가 충돌 쌍에 따라 폭증하지 않도록 규칙별 첫 Target 충돌만 보고.
+- Source/Target에 같은 값이 선택된 경우 E2E locator 중복을 발견하여 Target 영역으로 scope 보정. 최종 테스트 모두 통과.
+
+### 최종 검증
+
+- npm test: **161/161 통과** (기존 74 + Mapping 87).
+- npm run typecheck / npm run lint / npm run build: 통과.
+- 전체 Edge E2E **12/12 통과** (기존 9 + Mapping 3), 테스트 포트 5194.
+- 단위: 입력 deep-freeze 불변·복사 참조 분리, root 원시/배열, 누락/null/기본값/constant, 엄격 변환과 UTC 날짜·윤년, wildcard·index·empty/hole, 경로 alias·위험 키·충돌, import/export·버전·ID·미지 속성·과대 입력/출력·복제 예산·cyclic 입력, 결정성 검증.
+- E2E: Source 트리 선택/규칙 적용·수정/제외·삭제·상태 유지, Target 트리 선택/복사/실제 다운로드, 기본값·상수·boolean/number/date·wildcard 결과, 충돌 시 preview 제거/저장 차단, 원문 Source 다운로드 불변, 악성 import 거부/기존 규칙 유지, 파일 export/import 왕복·빈 배열/null/root·규칙 없음, 390px overflow 없음.
+- Mapping 시나리오에서 pageerror/외부 요청 0건. 기존 Text Diff/JSON Tools 회귀 전부 통과.
+- Mapping lazy chunk 약 21.5 KB / gzip 7.6 KB, 기존 Monaco main 약 3.527 MB / gzip 919.7 KB·TS Worker 약 6 MB. 큰 chunk 경고 유지.
+- docs/phase4-mapping-desktop.png·phase4-mapping-mobile.png 생성 및 시각 검토. 기존 화면은 회귀 테스트에서 재생성됨.
+
+### 알려진 제약 / 다음 작업
+
+- 한 규칙당 wildcard 한 번, Source와 Target의 개수 일치 필요. 다중 wildcard·재귀·필터·동적 표현식 미지원. 중첩 배열은 명시적 index 또는 전체 copy 사용.
+- Target root와 다른 활성 경로의 혼합 불가. 위험 segment는 Source에서도 거부하며 복사 payload 내부 같은 키는 안전한 데이터로 유지. 적용 해제 규칙도 경로·리터럴 형식 검증을 수행.
+- number 소수는 IEEE 754, boolean은 명시된 값만, date는 날짜 또는 UTC Z 시각만 지원. 시간대 offset/locale 추정 없음.
+- 현재 규칙 100개·경로 500자/80 depth·index<30k, source/target/규칙 문서 1 MiB·30k 값, 탐색 200k 보호 한도. Worker·대용량 성능 측정은 Phase 8이며 현재 한도가 지연시간 보장은 아님.
+- 패키지 변경 없는 Phase이므로 보안 조회는 재실행하지 않음. Phase 3의 runtime 0건/dev moderate 10건 기록 유지.
+- Phase 3·4 변경은 로컬 작업 트리에 남아 있으며 커밋·푸시는 수행하지 않았다. Phase 5 이후 미착수. 다음은 Phase 5 — Patch Export.

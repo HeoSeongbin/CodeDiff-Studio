@@ -21,6 +21,13 @@ self.MonacoEnvironment = {
             ? new TsWorker()
             : new EditorWorker(),
 };
+// Keep JSON diagnostics local, even for documents containing a remote $schema URL.
+monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+  validate: true,
+  allowComments: false,
+  enableSchemaRequest: false,
+  schemas: [],
+});
 loader.config({ monaco });
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
