@@ -164,3 +164,13 @@
 - 트리/보고서: virtual28rows, Map으로 file/dir 이중 경로를 별도 행 표시. 전체·subset JSON은 콘텐츠를 배제하고 statsScope/all-compared-files·exportedRows를 명시. export는 사용자 클릭만.
 - 장단점: 기본 반응성·메모리와 입력 불변성 유지 / main-thread pipeline이며 hard latency·메모리 보장은 아니다. viewport readonly 강조와 통계 정책이 다를 수 있음.
 - 영향·검증: FolderCompare/ManagedDiffEditor/CodeCompare/App + engine/tree, native directory fixture·cancel·350files·pageerror0·실제 다운로드·원본 파일 불변/CRLF 손실 없음. 신규 패키지 없음.
+
+## ADR-017 · 2026-11-09 · 로컬 Syntax Compare와 보수적 매칭
+
+- 선택: web-tree-sitter 0.25.10 + tree-sitter-wasms 0.1.13을 정확 버전 고정. 실제 Java/Python/JS/TS ABI14, C# ABI13 로드·파싱 확인. 각 언어 adapter의 노드 종류, WASM 자산 로더, AST 추출/매칭, UI를 분리한다. Vite ?url 로컬 자산만 사용하고 사용자 원문은 업로드·수정하지 않는다.
+- 근거: [공식 web binding 문서](https://github.com/tree-sitter/tree-sitter/blob/master/lib/binding_web/README.md), [0.26 구형 grammar 호환성 이슈](https://github.com/tree-sitter/tree-sitter/issues/5171). Parser.init/Language.load promise를 캐시하며 실패 캐시는 재시도를 허용한다.
+- 매칭: kind/scope/name + 매개변수 fingerprint 우선. 유일한 이름쌍만 매개변수 변경으로 연결하며 중복 서명은 임의 매칭하지 않는다. 유일 동일 본문·매개변수 함수쌍만 rename candidate, 이동/의미적 동등성은 추정하지 않는다. 클래스 변경과 하위 메서드 변경은 별도 요소이다.
+- fingerprint: AST leaf type/text 배열 직렬화, 주석·구문 간 공백 제외, 문자열 내용 보존. 본문을 제외한 선언과 본문을 따로 비교한다. WASM Node는 결과에 남기지 않고 tree/parser를 finally 해제한다.
+- 예산: 입력1 MiB, 트리100k노드·깊이128, 요소5k, parser progress callback 약1초 취소. 구형 timeout setter는 실제 런타임에서 BigInt 오류가 발생해 권장 progress callback 사용. 동기 추출/매칭의 hard deadline 보장은 없으며 Worker는 Phase8 범위다.
+- 한계: 익명/화살표 함수 변수·TSX·최신 grammar 문법 전체 미지원. 파싱 오류 시 부분 AST 미표시. 원문 readonly Text Diff와 연결하며 입력 snapshot이 달라지면 결과를 숨긴다.
+- 검증 제한: Node 실제 WASM 테스트 통과. 기존 Tailwind 네이티브 파일의 Windows Application Control 차단 및 WASM fallback 정지로 Vite/E2E/Production Build 확인 보류. 이를 해결하기 위해 보안 정책이나 기존 스타일 구성을 변경하지 않는다.

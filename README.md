@@ -1,6 +1,6 @@
 # CodeDiff Studio
 
-브라우저에서 소스 코드 비교·JSON 분석·필드 매핑을 로컬로 수행하는 React + TypeScript 개발 도구. 이번 버전은 **Phase 0–6** 범위입니다. 전체 요구사항은 [PROJECT.md](PROJECT.md)를 참고하세요.
+브라우저에서 소스 코드 비교·JSON 분석·필드 매핑을 로컬로 수행하는 React + TypeScript 개발 도구. 검증 완료 범위는 **Phase 0–6**이며 Phase 7 구현은 검증 진행 중입니다. 전체 요구사항은 [PROJECT.md](PROJECT.md)를 참고하세요.
 
 ## 실행
 
@@ -158,3 +158,11 @@ Phase 5 검증: **229/229 테스트** (실제 Git 호환성 15개 포함), **Edg
 최종 Phase 6 검증: **271/271 테스트**, **Edge E2E 18/18**, TypeScript·ESLint·Production Build 통과. 네이티브 폴더 선택, 오류·binary·삭제/추가·case·기본 제외·300/350 파일 비교·가상 DOM·취소·실제 결과 다운로드·원본 파일 불변·390px 화면을 검증했습니다. 기존 Monaco 큰 chunk 경고가 남아 있으며 새 외부 의존성은 없습니다. 다음은 Phase 7 — Syntax Compare입니다.
 
 ![Phase 6 Folder Compare](docs/phase6-folder-desktop.png)
+
+## Syntax Compare — Phase 7 검증 진행 중
+
+Code Compare에 두 원문을 준비하고 Syntax Compare → 언어 자동/수동 선택 → 구문 비교 실행을 사용합니다. Java, C#, Python, JavaScript, TypeScript별 로컬 Tree-sitter WASM을 사용합니다. 클래스·선언형 함수·메서드·생성자·import의 추가/삭제, 매개변수·선언·본문 변경을 목록으로 표시하고 클릭하면 읽기 전용 Text Diff의 해당 줄로 이동합니다. 입력 변경 시 이전 결과를 숨깁니다.
+
+이름 변경은 같은 scope에서 매개변수·본문이 동일한 유일 조합의 **후보**입니다. 이동·의미 동등성·호출 관계는 판정하지 않습니다. 공백·주석만 바뀐 경우 AST 목록에 나타나지 않으므로 원문 Diff를 함께 확인하세요. 클래스 본문과 내부 함수 변경은 각각 표시되어 변경 건수는 줄 수와 다릅니다. 익명/화살표 함수 변수, TSX, 최신 문법 전체 지원은 보장하지 않습니다. 파싱 오류는 부분 AST 결과를 제공하지 않고 Text Diff로 안내합니다. 파일당 UTF8 1 MiB, 트리 100,000노드/깊이128, 요소5,000개 제한이며 main-thread 분석입니다.
+
+**현재 검증 제한:** 실제 5개 WASM의 Node 통합 테스트는 통과했으나 Windows Application Control이 기존 Tailwind 네이티브 모듈을 차단하고 WASM 대체 로딩도 정지하여 Vite 시작/Production Build와 신규 브라우저 테스트는 미검증입니다. Phase 7 완료를 선언하지 않습니다. 환경 문제 해소 후 전체 E2E 및 빌드를 다시 실행해야 합니다.

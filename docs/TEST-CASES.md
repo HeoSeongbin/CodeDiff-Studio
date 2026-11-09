@@ -85,3 +85,9 @@ Phase 4 당시 결과: 단위 **161/161**, Edge E2E **12/12**, typecheck/lint/bu
 - ManagedDiffEditor로 Monaco detach-before-dispose 수명 관리 보정. binary 전환/Code Compare 재생성에서 발생하던 실제 pageerror를 탐지하고 해결한 뒤 모든 기존 E2E 재검증.
 
 화면: docs/phase6-folder-desktop.png / docs/phase6-folder-mobile.png. 실제 GitHub Pages·실기기·대형 project memory/time benchmark는 미검증. folder tests의 tmpdir codediff-folder-*는 생성된 절대경로 검증 후 그 디렉터리만 정리한다. 다음 AST 테스트는 Phase 7에서 추가한다.
+
+## Phase 7 Syntax Compare · 2026-11-09
+
+- 실제 web-tree-sitter + 5개 WASM Node 통합 테스트15개: 매개변수·본문·클래스·import·유일 rename 후보, 모호한 duplicate 서명, 오버로드 순서, 문자열 공백/주석, 한글/CRLF 줄 위치, 잘못된 구문/1MiB/깊이 제한. 전체286 통과.
+- e2e/phase7.spec.ts 신규6개: 로컬 grammar 5종, readonly Text Diff 연결, stale/parse error, unsupported/mobile. **미검증**: 기존 Tailwind 모듈 Windows Application Control 차단 및 fallback 정지로 dev server 시작 실패. 환경 복원 후 기존18개와 합계24개 실행 필요.
+- TypeScript/ESLint 통과, Production Build 정지로 최종 완료 보류.

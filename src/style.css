@@ -1707,3 +1707,6 @@ footer {
     height: 420px;
   }
 }
+.syntax-workspace { padding: 20px; max-width: 1500px; margin: auto; overflow-wrap: anywhere; }
+.syntax-workspace select { background: #182235; color: #eef; padding: 8px; }
+.syntax-change { display: flex; flex-direction: column; text-align: left; gap: 6px; width: 100%; padding: 12px; }

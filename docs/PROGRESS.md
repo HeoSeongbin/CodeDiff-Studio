@@ -1,10 +1,10 @@
 # 개발 진행 현황
 
-기준일: 2026-11-06 (Asia/Seoul)
+기준일: 2026-11-09 (Asia/Seoul)
 
 ## 현재 Phase
 
-Phase 6 — Folder Compare 구현·검증 완료. 다음 단계는 Phase 7 — Syntax Compare. 이번 세션은 Phase 6 범위에서 종료한다. 이전 Phase 기록은 당시 이력이며 최신 상태는 하단 Phase 6 기록을 기준으로 한다.
+Phase 7 — Syntax Compare 구현 및 단위 검증 진행. 브라우저·Production Build 검증은 환경 문제로 보류하여 Phase 7 완료 처리하지 않는다. 다음 세션은 Phase 7 검증부터 재개한다. 이전 Phase 기록은 당시 이력이며 최신 상태는 하단 Phase 7 기록을 기준으로 한다.
 
 ## 완료 작업
 
@@ -273,3 +273,40 @@ AGENTS/PROJECT/PROGRESS/DECISIONS/README, 실제 소스 및 jsdiff의 create/app
 - 폴더당 raw metadata20k/eligible1000/readable20MiB/per-file5MiB. 개별 oversized는 read 없이 오류 행. 전체15초 예산·취소는 file/await 경계, File.arrayBuffer와 동기Diff 즉시 강제 중단은 아님. Phase 8 Worker 성능 보장 미검증.
 - 보안 조회/새 패키지 없음. 기존 Phase 3 audit(runtime0/dev moderate10) 기록 유지. GitHub Pages·모바일 실기기·다른 browser/OS는 미검증.
 - Phase 5·6 변경은 로컬이며 커밋/푸시하지 않았다. 다음은 Phase 7 — Syntax Compare.
+
+
+## Phase 7 — 2026-11-09 · 구현 / 최종 검증 보류
+
+### 시작 상태 대조
+
+- main/origin main 동기화, 변경 없음. 최신 커밋 d815a62에 Phase5·6 반영됨. 과거 문서의 미커밋 표기는 당시 기록이다.
+- 기존 소스의 Folder/JSON/Mapping/Patch/Text 기능과 Phase6 문서 대조. 시작 시 기존 테스트271/271 통과.
+
+### 구현
+
+- 별도 core/syntax: 5개 언어 adapter, 로컬 runtime/grammar WASM 로더, AST 추출 및 독립 매칭 엔진.
+- Java/C#/Python/JS/TS 실제 grammar 호환 확인(ABI14, C#13). 클래스/메서드/함수/import 추가삭제, 선언/매개변수/본문 변경, 유일 동일 본문 기반 함수명 변경 후보.
+- Syntax Compare lazy workspace: Code Compare 현재 원문 사용, 자동/수동 언어, 실행/오류/입력 변경 표시, 100개씩 변경 목록, 클릭→양쪽 readonly Monaco 줄 이동, 미지원/parse error Text Diff 안내. 다른 엔진/업로드 원본 수정 없음.
+- 입력1MiB/AST100k노드·깊이128/요소5k 제한, parser progress cancel, tree/parser finally 해제. ADR017 및 README 지원 범위 기록.
+
+### 실제 검증 결과
+
+- npm test: 286/286 통과(기존271 + 신규15). 실제5개 WASM으로 매개변수/본문/import/클래스/rename 후보/중복·오버로드/주석·문자열/한글·CRLF/파싱오류/용량·깊이 테스트.
+- npm run typecheck: 통과. npm run lint: 통과.
+- npm run build: 실행했으나 Vite 설정의 기존 Tailwind 로딩 단계에서 응답 정지, 중단. 성공으로 처리하지 않음.
+- npm run test:e2e: 실행했으나 webServer 시작60초 시간초과. 신규6개 browser test 작성, 실행 검증 미완료. 기존18개 browser test 회귀도 이번 세션 미완료.
+- 원인 분리: 직접 require('@tailwindcss/oxide-win32-x64-msvc') 시 `ERR_DLOPEN_FAILED: An Application Control policy has blocked this file.` 재현. 기존 @tailwindcss/oxide의 설치된 WASM fallback 직접 로드도 응답 정지. sandbox 밖에서도 재현. 정책 변경/스타일 파이프라인 제거는 하지 않음.
+- 새 패키지 설치 audit 결과 moderate10건(기존 dev 경고), 설치 시 critical/high 없음. 추가 audit 검증은 하지 않음.
+
+### 미완료 / 다음 작업
+
+1. 기존 Tailwind native/WASM 로딩 가능한 개발 환경 복원 후 npm run build 및 전체 npm run test:e2e 재실행.
+2. 신규 browser case: 실제5개 grammar 로드, source snapshot 변경, parse error fallback, unsupported/mobile, 외부 요청0 및 Text Diff 줄 이동을 확인한다. 현재 이 항목들은 작성된 테스트이며 검증 완료가 아니다.
+3. production 산출물에서 WASM 자산 경로·로딩 및 실제 UI를 확인하고 Phase7 완료 여부 결정.
+4. 이후 Phase8 — Worker/성능·UI/UX. 이번에는 Phase8에 착수하지 않음. 커밋·푸시 미수행.
+
+### 구문 분석 한계
+
+- 익명·화살표 함수 변수/TSX/최신 grammar 문법 전체 미지원. 주석·공백 변경은 AST 목록 제외, 원문 diff에서 확인.
+- rename은 후보이며 이동·의미 동등성 판정 없음. 클래스와 내부 메서드 변경은 중복 집계될 수 있는 별도 요소.
+- 메인 스레드 추출·매칭의 hard latency 보장 없음. production/browser 검증 전 기능 완료를 선언하지 않음.
