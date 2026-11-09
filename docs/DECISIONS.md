@@ -205,3 +205,13 @@ StrictMode 보완: 개발 모드의 시험 mount에서 즉시 Worker를 생성�
 - 탭 정책: 열린 workspace의 Monaco model/입력/뷰 상태는 보존하고 계산 Worker는 비활성화 때 종료한다. 화면 설정의 모델·계산 Worker 개수는 메타데이터만 보여 주며 전체 메모리 사용량의 대체 지표가 아니다. 화면 전환·옵션 조절 후 모델 개수가 증가하지 않는지 E2E로 검증한다.
 - 성능: 별도 Playwright config/test:perf를 단일 Edge worker로 실행한다. 100/1k/10k/50k줄, 500k/5MiB 단일 행, 반복/다수 변경, 취소, 20k값 JSON/구조 비교, 500파일을 다룬다. 업로드·debounce·메시지·UI 결과까지 wall time,16ms timer 간격, forced-GC 후 CDP main-target JS heap, 렌더 행/모델 수를 JSON으로 기록한다. Worker/native/GPU 메모리·실제 키보드 입력 지연·통계적 반복 측정은 포함하지 않는다. 한 환경의 관측값은 다른 기기의 SLA가 아니다.
 - 범위: main Monaco chunk 경고는 유지되며 현재 Phase의 CPU·메모리·목록·UI 수명 개선과 구분한다. CI/배포·다른 OS/브라우저는 Phase9에서 검토한다. 최종 측정값은 docs/phase8-performance.json/PROGRESS를 기준으로 한다.
+
+## ADR-021 · 2026-11-09 · GitHub Pages는 빌드 산출물만 게시
+
+- 문제: main 루트의 Vite 소스 HTML을 legacy Pages로 게시해 /src/main.tsx404 및 빈 화면 발생.
+- 대안: dist를 별도 브랜치에 커밋하거나 소스 HTML을 수동 변경. 선택: Actions에서 검사와 빌드를 통과한 dist만 공식 Pages artifact로 게시한다. 해시 파일명을 수동 관리하지 않고 원본 저장소에 dist를 커밋하지 않는다.
+- 경로: configure-pages의 base_path에 /를 붙여 VITE_BASE_PATH로 전달한다. Vite 기본값 ./는 유지한다. favicon은 BASE_URL로 참조한다. Worker·동적 import·WASM은 기존 Vite URL 변환을 유지한다.
+- 권한/운영: contents read, pages write, id-token write; main push 또는 workflow_dispatch; 배포 job은 build 성공에 의존. 저장소 Pages Source는 GitHub Actions(workflow)로 설정해야 한다.
+- 영향: vite.config.ts, index.html, public/favicon.svg, .github/workflows/pages.yml, deployment 전용 Playwright config/test. UI/비교 알고리즘·업로드 원문에는 영향 없음.
+- 검증: 실제 프로젝트 하위 경로 production Edge에서 compiled JS/Monaco/Worker/Syntax WASM/favicon 로딩 및 외부 요청0 확인. CI는 Chromium으로 같은 배포 테스트를 실행한다. 기존 Edge 회귀와 분리하여 루트 경로 테스트의 의미를 보존한다.
+- 근거: https://v6.vite.dev/guide/static-deploy 및 https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages

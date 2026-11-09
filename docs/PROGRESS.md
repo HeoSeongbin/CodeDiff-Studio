@@ -4,7 +4,7 @@
 
 ## 현재 Phase
 
-Phase 8 — 성능 및 UI/UX 구현·검증 완료. 다음은 Phase 9 — 통합 테스트 및 배포. 이번 세션은 Phase 8 범위에서 종료하며 CI/배포는 수행하지 않았다. 이전 기록은 당시 이력이며 최신 상태는 하단 Phase 8 기록을 기준으로 한다.
+Phase 8 완료. Phase 9 — 통합 테스트 및 배포 진행 중. 현재는 GitHub Pages 빈 화면 복구 범위이며 Phase 9 전체 완료로 처리하지 않는다. 이전 기록은 당시 이력이며 최신 상태는 하단 배포 복구 기록을 기준으로 한다.
 
 ## 완료 작업
 
@@ -386,3 +386,12 @@ AGENTS/PROJECT/PROGRESS/DECISIONS/README, 실제 소스 및 jsdiff의 create/app
 - Monaco 본체 약3.53MB/TS Worker 약6MB의 기존 chunk 경고, Tree-sitter glue eval/Node externalization, Tailwind WASI 경고 유지. 기존 dev audit moderate10 이력 유지, 신규 dependency/audit 조회 없음.
 - 다른 OS/브라우저·모바일 실기기·실제 배포는 미검증. 긴 단일 행에는 Monaco 자체 시각 한도와 상세 cap이 있으며 원문 다운로드는 보존한다. AST 지원 범위/rename 후보 한계는 Phase7과 동일하다.
 - 다음은 Phase9 통합 테스트·Actions/Pages 배포. 이번 변경은 미커밋·미푸시이며 현재 Phase를 검증하고 종료한다.
+
+## 2026-11-09 · GitHub Pages 빈 화면 복구
+
+- 원인: Pages가 legacy 모드로 main 루트를 게시하여 소스 index.html의 /src/main.tsx 요청이404가 됐다. favicon.ico404는 별개의 아이콘 누락이다.
+- 수정: GitHub Actions에서 npm ci → 단위 테스트/TypeScript/ESLint → Vite build → 하위 경로 브라우저 검증 → dist artifact 업로드 → Pages 배포. 소스 HTML은 개발용으로 유지한다.
+- VITE_BASE_PATH로 Pages 프로젝트 경로를 주입하며 기본 상대 경로 빌드도 보존한다. 로컬 favicon.svg와 배포 전용 Playwright config/test 추가. 비교 엔진과 파일 처리 정책은 변경하지 않았다.
+- 검증: npm test311/311, typecheck/lint/build 통과. /CodeDiff-Studio/ production Edge 배포 테스트1/1 통과: Monaco, 실제 계산 Worker, Syntax runtime/Java WASM, favicon200, pageerror/실패/외부 요청0. 첫 sandbox 미리보기 연결 지연 및 포트 충돌 후 별도 포트의 실제 Edge에서 재검증했다.
+- 기존 Monaco chunk 크기, Tree-sitter eval/Node externalization, Tailwind WASI 경고 유지. 전체31개 회귀·성능 측정은 이번 배포 설정 수정에서 재실행하지 않았으며 기존 Phase8 결과와 구분한다.
+- 실제 Pages 전환·배포 결과는 아래 후속 기록에 남긴다. Phase9의 전체 통합 검토·포트폴리오 설명 등은 후속 작업이다.

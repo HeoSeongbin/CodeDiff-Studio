@@ -3,7 +3,7 @@ const port = process.env.CODEDIFF_TEST_PORT || '5188';
 const production = process.env.CODEDIFF_TEST_PREVIEW === '1';
 export default defineConfig({
   testDir: './e2e',
-  testIgnore: '**/performance.spec.ts',
+  testIgnore: ['**/performance.spec.ts', '**/deployment.spec.ts'],
   use: {
     channel: 'msedge',
     baseURL: `http://127.0.0.1:${port}`,

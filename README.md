@@ -205,4 +205,23 @@ npm run test:perf
 
 ![Phase 8 Light](docs/phase8-light-desktop.png)
 
-다음은 **Phase 9 — 통합 테스트 및 배포**입니다. CI/GitHub Pages 배포는 아직 수행하지 않았습니다.
+현재는 **Phase 9 — 통합 테스트 및 배포** 진행 중입니다. GitHub Pages 복구 설정·검증은 아래 배포 항목과 docs/PROGRESS.md의 최신 기록을 참고하세요.
+
+## GitHub Pages 배포 및 빈 화면 문제
+
+배포 주소: [CodeDiff Studio](https://heoseongbin.github.io/CodeDiff-Studio/).
+
+Settings → Pages → Build and deployment → Source를 **GitHub Actions**로 설정합니다. main에 push하면 Deploy GitHub Pages 워크플로가 검사·빌드·배포 하위 경로 테스트를 통과한 **dist**만 게시합니다. Actions에서 수동 실행도 가능합니다. 배포 job 성공 후 페이지를 새로 고치세요.
+
+main 루트의 index.html은 개발용이며 이를 그대로 게시하면 /src/main.tsx404로 빈 화면이 나타납니다. 소스 HTML이나 해시 asset 이름을 수동 수정하지 마세요. favicon은 저장소의 SVG를 사용합니다. VITE_BASE_PATH는 Actions가 Pages 경로를 자동 주입하며, 일반 로컬 빌드는 기본 상대 경로를 유지합니다.
+
+배포 경로 검증(PowerShell):
+
+```powershell
+$env:VITE_BASE_PATH = '/CodeDiff-Studio/'
+npm run build
+npx playwright test --config=playwright.deployment.config.ts
+Remove-Item Env:VITE_BASE_PATH
+```
+
+설치된 Edge로 Monaco·계산 Worker·Syntax WASM·favicon과404/외부 요청 여부를 확인합니다. CI는 Chromium을 설치하여 같은 테스트를 수행합니다. Phase9 전체 완료 여부와 실제 배포 검증 결과는 docs/PROGRESS.md를 참고하세요.
