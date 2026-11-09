@@ -225,3 +225,13 @@ Remove-Item Env:VITE_BASE_PATH
 ```
 
 설치된 Edge로 Monaco·계산 Worker·Syntax WASM·favicon과404/외부 요청 여부를 확인합니다. CI는 Chromium을 설치하여 같은 테스트를 수행합니다. Phase9 전체 완료 여부와 실제 배포 검증 결과는 docs/PROGRESS.md를 참고하세요.
+
+2026-11-09: Actions 배포 및 실제 Pages 주소의 Edge smoke 검증 완료. 빌드 HTML·Monaco·계산 Worker·Syntax WASM·favicon 정상 로딩, 검사 중404/pageerror/외부 요청0. 기존311개 테스트와 TypeScript/ESLint/build, Ubuntu CI Chromium 배포 테스트도 통과했습니다. 전체 기능 회귀·성능 측정의 이전 결과는 Phase8 항목과 구분합니다.
+
+실제 게시 주소를 재검사할 때는 다음을 사용합니다(사이트에 파일을 전송하지 않는 초기 예제 기반 smoke 검사).
+
+```powershell
+$env:CODEDIFF_DEPLOYMENT_URL = 'https://heoseongbin.github.io/CodeDiff-Studio/'
+npx playwright test --config=playwright.deployment.config.ts
+Remove-Item Env:CODEDIFF_DEPLOYMENT_URL
+```

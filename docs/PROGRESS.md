@@ -395,3 +395,11 @@ AGENTS/PROJECT/PROGRESS/DECISIONS/README, 실제 소스 및 jsdiff의 create/app
 - 검증: npm test311/311, typecheck/lint/build 통과. /CodeDiff-Studio/ production Edge 배포 테스트1/1 통과: Monaco, 실제 계산 Worker, Syntax runtime/Java WASM, favicon200, pageerror/실패/외부 요청0. 첫 sandbox 미리보기 연결 지연 및 포트 충돌 후 별도 포트의 실제 Edge에서 재검증했다.
 - 기존 Monaco chunk 크기, Tree-sitter eval/Node externalization, Tailwind WASI 경고 유지. 전체31개 회귀·성능 측정은 이번 배포 설정 수정에서 재실행하지 않았으며 기존 Phase8 결과와 구분한다.
 - 실제 Pages 전환·배포 결과는 아래 후속 기록에 남긴다. Phase9의 전체 통합 검토·포트폴리오 설명 등은 후속 작업이다.
+
+### 실제 배포 검증 결과
+
+- 수정 커밋1d60f2c를 main에 push하고 Pages build_type을 legacy → workflow로 전환했다.
+- GitHub Actions run42576994371: Ubuntu npm ci/test311/typecheck/lint/build, Chromium 배포 테스트1/1, artifact 업로드 및 deploy job 모두 성공.
+- https://heoseongbin.github.io/CodeDiff-Studio/ 실제 주소에서 Edge 배포 테스트1/1 통과. compiled HTML, Monaco, 계산 Worker, Syntax WASM, favicon200 확인; pageerror/실패/외부 요청0. 빈 화면 원인 해결 확인.
+- CODEDIFF_DEPLOYMENT_URL로 같은 배포 smoke 테스트를 게시된 주소에도 실행할 수 있다. 이 모드에서는 로컬 서버를 시작하지 않는다.
+- Phase9 전체 완료를 선언하지 않는다. 후속: 전체 요구사항과 최종 완료 조건의 통합 검토, README/포트폴리오 소개 정리, 필요 시 추가 회귀와 실기기 검증. 이번 변경 파일은 배포 workflow/config/favicon/전용 E2E와 README/PROGRESS/ADR이다.
