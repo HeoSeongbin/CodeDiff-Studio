@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useNarrowScreen } from '../hooks/useNarrowScreen';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ManagedDiffEditor as DiffEditor } from '../components/ManagedDiffEditor';
 import type { editor } from 'monaco-editor';
 import {
@@ -13,7 +14,9 @@ import {
   Upload,
 } from 'lucide-react';
 import { useWorkspace } from '../stores/workspace';
-import { compareText } from '../core/diff';
+import { useCompute } from '../hooks/useCompute';
+import { usePreferences } from '../stores/preferences';
+import { ResultList } from '../features/json-tools/ResultList';
 import { downloadText } from '../core/export';
 import { ChangeDetail } from '../components/ChangeDetail';
 import { detectLanguage, languages, lineCount, loadFile, MAX_BYTES } from '../core/file';
@@ -27,13 +30,31 @@ export default function CodeCompare({
 }) {
   const state = useWorkspace();
   const [error, setError] = useState('');
-  const [compareError, setCompareError] = useState('');
-  const [result, setResult] = useState<ReturnType<typeof compareText>>();
-  const [busy, setBusy] = useState(false);
+
+  const prefs = usePreferences();
+  const narrow = useNarrowScreen();
+  const originalLineCount = useMemo(() => lineCount(state.original.text), [state.original.text]);
+  const modifiedLineCount = useMemo(() => lineCount(state.modified.text), [state.modified.text]);
+  const job = useMemo(
+    () => ({
+      kind: 'text' as const,
+      original: state.original.text,
+      modified: state.modified.text,
+      options: state.options,
+    }),
+    [state.original.text, state.modified.text, state.options],
+  );
+  const computation = useCompute(job);
+  const { result, busy, error: compareError } = computation;
+
   const [active, setActive] = useState(0);
   const [encoding, setEncoding] = useState('auto');
   const [ready, setReady] = useState(false);
-  const [mode, setMode] = useState('side');
+  const [mode, setMode] = useState(narrow ? 'unified' : 'side');
+  const [manualMode, setManualMode] = useState(false);
+  useEffect(() => {
+    if (!manualMode) setMode(narrow ? 'unified' : 'side');
+  }, [manualMode, narrow]);
   const [wrap, setWrap] = useState(false);
   const [changesOnly, setChangesOnly] = useState(false);
   const [context, setContext] = useState(3);
@@ -41,23 +62,7 @@ export default function CodeCompare({
   const [notice, setNotice] = useState('');
   const uploadVersion = useRef({ original: 0, modified: 0 });
   const diffEditor = useRef<editor.IStandaloneDiffEditor>();
-  useEffect(() => {
-    setBusy(true);
-    setResult(undefined);
-    const timer = setTimeout(() => {
-      try {
-        setResult(compareText(state.original.text, state.modified.text, state.options));
-        setCompareError('');
-        setActive(0);
-      } catch (e) {
-        setResult(undefined);
-        setCompareError((e as Error).message);
-      } finally {
-        setBusy(false);
-      }
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [state.original.text, state.modified.text, state.options]);
+  useEffect(() => setActive(0), [result]);
   useEffect(
     () => () => {
       uploadVersion.current.original++;
@@ -100,7 +105,7 @@ export default function CodeCompare({
             <small>CODE COMPARISON WORKSPACE</small>
           </div>
         </div>
-        <span className="version">v0.3 / Phase 3</span>
+        <span className="version">v0.8 / Phase 8</span>
         <div className="privacy">
           <ShieldCheck size={15} /> 브라우저 로컬 처리
         </div>
@@ -144,7 +149,10 @@ export default function CodeCompare({
                 <select
                   aria-label="비교 보기"
                   value={mode}
-                  onChange={(e) => setMode(e.target.value)}
+                  onChange={(e) => {
+                    setManualMode(true);
+                    setMode(e.target.value);
+                  }}
                 >
                   <option value="side">Side by side</option>
                   <option value="unified">Unified Diff</option>
@@ -184,8 +192,8 @@ export default function CodeCompare({
                     <div>
                       <strong>{state[side].name}</strong>
                       <small>
-                        {lineCount(state[side].text)} lines · {state[side].size.toLocaleString()} B
-                        업로드 · {state[side].encoding}
+                        {side === 'original' ? originalLineCount : modifiedLineCount} lines ·{' '}
+                        {state[side].size.toLocaleString()} B 업로드 · {state[side].encoding}
                       </small>
                     </div>
                     <label className="upload">
@@ -315,10 +323,12 @@ export default function CodeCompare({
                 language={state.language}
                 original={state.original.text}
                 modified={state.modified.text}
-                theme="vs-dark"
+                theme={prefs.theme === 'dark' ? 'vs-dark' : 'vs'}
                 loading={<div className="loading">로컬 코드 에디터를 준비하고 있습니다…</div>}
                 options={{
                   originalEditable: true,
+                  originalAriaLabel: '원본 코드 편집기',
+                  modifiedAriaLabel: '수정본 코드 편집기',
                   readOnly: false,
                   renderSideBySide: mode === 'side',
                   useInlineViewWhenSpaceIsLimited: false,
@@ -331,7 +341,7 @@ export default function CodeCompare({
                   automaticLayout: true,
                   fontSize: 13,
                   lineHeight: 23,
-                  minimap: { enabled: false },
+                  minimap: { enabled: prefs.minimap && !narrow },
                   scrollBeyondLastLine: false,
                   ignoreTrimWhitespace: !!(
                     state.options.ignoreWhitespace || state.options.ignoreTrailingWhitespace
@@ -387,9 +397,11 @@ export default function CodeCompare({
                   ? '비교 불가능'
                   : busy
                     ? '비교 중'
-                    : result?.hunks.length
-                      ? '비교 완료'
-                      : '파일 동일'}
+                    : computation.cancelled
+                      ? '비교 취소됨'
+                      : result?.hunks.length
+                        ? '비교 완료'
+                        : '파일 동일'}
               </span>
               <span>
                 {mode === 'side'
@@ -401,10 +413,10 @@ export default function CodeCompare({
           </section>
           <div className="note">
             <ShieldCheck size={14} /> 파일은 기기에서만 처리되며 서버로 전송되지 않습니다.
-            <span>텍스트 비교 · Phase 2</span>
+            <span>텍스트 비교 · Worker</span>
           </div>
         </main>
-        <aside className="changes">
+        <aside className="changes" aria-label="변경 분석" aria-busy={busy}>
           <div className="changes-title">
             변경 분석<span className="live">LIVE</span>
           </div>
@@ -454,35 +466,55 @@ export default function CodeCompare({
               </button>
             </div>
           </div>
+          <div className="compute-controls" role="status">
+            {busy ? (
+              <>
+                <span>로컬 Worker 비교 중…</span>
+                <button onClick={computation.cancel}>비교 취소</button>
+              </>
+            ) : computation.cancelled || compareError ? (
+              <>
+                <span>{computation.cancelled ? '비교가 취소되었습니다.' : ''}</span>
+                <button onClick={computation.retry}>다시 비교</button>
+              </>
+            ) : null}
+          </div>
           <div className="change-list">
-            {result?.hunks.map((h, i) => (
-              <button
-                key={h.id}
-                className={`change ${active === i ? 'selected' : ''}`}
-                onClick={() => navigate(i)}
-              >
-                <div>
-                  <span className={`change-kind ${h.kind}`}>
-                    {h.kind === 'modified' ? '수정 추정' : h.kind === 'added' ? '추가' : '삭제'}
-                  </span>
-                  <span>
-                    #{i + 1}
-                    <ChevronRight size={13} />
-                  </span>
-                </div>
-                <strong>
-                  원본{' '}
-                  {h.oldLines
-                    ? `${h.oldStart}${h.oldLines > 1 ? `–${h.oldEnd}` : ''}`
-                    : `없음 (위치 ${h.oldStart})`}{' '}
-                  → 수정{' '}
-                  {h.newLines
-                    ? `${h.newStart}${h.newLines > 1 ? `–${h.newEnd}` : ''}`
-                    : `없음 (위치 ${h.newStart})`}
-                </strong>
-                <code>{h.lines[0]?.content.trim()}</code>
-              </button>
-            ))}
+            {result && (
+              <ResultList
+                className="code-change-page"
+                items={result.hunks}
+                selectedIndex={active}
+                render={(h, i) => (
+                  <button
+                    key={h.id}
+                    className={`change ${active === i ? 'selected' : ''}`}
+                    onClick={() => navigate(i)}
+                  >
+                    <div>
+                      <span className={`change-kind ${h.kind}`}>
+                        {h.kind === 'modified' ? '수정 추정' : h.kind === 'added' ? '추가' : '삭제'}
+                      </span>
+                      <span>
+                        #{i + 1}
+                        <ChevronRight size={13} />
+                      </span>
+                    </div>
+                    <strong>
+                      원본{' '}
+                      {h.oldLines
+                        ? `${h.oldStart}${h.oldLines > 1 ? `–${h.oldEnd}` : ''}`
+                        : `없음 (위치 ${h.oldStart})`}{' '}
+                      → 수정{' '}
+                      {h.newLines
+                        ? `${h.newStart}${h.newLines > 1 ? `–${h.newEnd}` : ''}`
+                        : `없음 (위치 ${h.newStart})`}
+                    </strong>
+                    <code>{h.lines[0]?.content.trim().slice(0, 200)}</code>
+                  </button>
+                )}
+              />
+            )}
           </div>
           {!busy && result && !result.hunks.length && <p>선택한 비교 옵션에서 차이가 없습니다.</p>}
           {result?.hunks[active] && <ChangeDetail hunk={result.hunks[active]} unit={unit} />}

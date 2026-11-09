@@ -98,3 +98,11 @@ Phase 4 당시 결과: 단위 **161/161**, Edge E2E **12/12**, typecheck/lint/bu
 - Production preview 전체 Edge26/26 통과. CODEDIFF_TEST_PREVIEW=1로 실제 dist를 사용하고 npm run build를 먼저 실행한다. Syntax8개는 pageerror0을 검증하며 실제5개 grammar HTTP 성공, parse error/stale/unsupported/mobile, readonly 상태 입력 후 원문 CRLF 다운로드 일치, fetch 오류 재시도를 포함한다. 기존18개 회귀 포함.
 - 개발 모드 기존18개와 Syntax7개 통과 후, fetch 오류 주입이 Vite ?url 모듈을 차단하던 테스트를 고쳐 Syntax8/8 재검증 통과. StrictMode discarded instance의 Canceled Worker 오류와 production 줄 범위 경합도 수정 후 검증했다.
 - TypeScript·ESLint·Build 통과. 이전 보류 기록은 당시 이력이며 최종 상태는 이 절과 PROGRESS 최종 기록을 기준으로 한다.
+
+## Phase 8 성능 및 UI/UX · 2026-11-09
+
+- 신규20개 단위·통합: request supersession/late id/AbortSignal/already aborted/idle30초/이미 abort된 요청 뒤 idle 해제/timeout/crash/transport·factory 오류 및 retry, raw CRLF/옵션별 Text·inline, JSON null/missing/prototype-like key/unsafe integer/안전한 JSONPath·CSV, Mapping compile/value/부분 결과 차단, Patch 생성·재검증, allocation-free scan의 Unicode/control/EOL,50k줄 위치, async Folder comparator 및 취소 전파. 전체311/311 통과.
+- Phase8 E2E5개 + 기존26개로 production31/31. 실제 Worker 취소·실패/재시도·다운로드 bytes, 새 JSON 입력 보존·저장 gate,100개 페이지·선택 탐색, all-workspace Light/Dark·MiniMap·패널 native keyboard 조절, 본문 이동·일부 안내 텍스트4.5:1 대비, 모바일 Unified/overflow, 모델 수 유지 및 pageerror0.
+- 개발 모드 기존26개+Phase8 기존4개 통과, 신규 입력 fixture를 명시 업로드로 보완한 뒤 Phase8 전체5/5 재검증. bulk keyboard 테스트의 잘못된 JSON fixture는 실제 source parse 오류로 표기되었고 동일로 오판하지 않았다.
+- 성능은 일반 회귀에서 제외한 단일 Playwright worker config로 분리. npm run test:perf production1/1 통과,12시나리오 정확성·응답성·DOM cap·원본 파일 불변·외부 요청0·pageerror0·모델6개. 수치/방법/한계는 PERFORMANCE.md/phase8-performance.json 참조. main-target heap은 Worker/native/GPU를 제외한다.
+- TypeScript·ESLint·Production Build 통과. 큰 Monaco chunk/Tree-sitter glue/WASI 경고와 실제 배포·타 OS/브라우저·실기기·전체 접근성 인증 미검증을 문서에 남긴다.

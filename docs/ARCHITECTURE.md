@@ -1,5 +1,7 @@
 # 아키텍처
 
+최신 실행 경계는 하단 Phase8 절을 기준으로 한다. 앞 절은 단계별 확장 이력이다.
+
 Phase 1은 `app/App.tsx`(화면·Monaco lifecycle), `stores/workspace.ts`(메모리 상태), `core/file.ts`(디코딩·언어 감지·제한), `core/diff.ts`(UI 독립 비교), `tests/core.test.ts`로 구성한다.
 
 파일 바이트 → 크기 검사 → BOM/수동 인코딩 → fatal TextDecoder → 바이너리 검사 → 편집용 상태 → 250ms debounce → jsdiff → 변경 블록 목록. Monaco는 원문을 받아 자체 diff 및 구문 강조를 수행한다. 업로드 파일 자체는 수정하지 않는다. 상태는 localStorage에 저장하지 않는다.
@@ -58,3 +60,13 @@ CR-only 원문은 길이를 보존한 분석 복사본에서 파싱하고 원문
 ManagedDiffEditor는 Monaco 공개 API로 Diff editor와 두 model을 직접 소유한다. 외부 snapshot 교체는 이전 diff view-model 취소 후 다음 task에서 setValue하고 재연결하며, 직접 편집 echo는 값이 같으면 무시한다. clear pending timer → model detach → editor dispose → text models dispose 순서로 종료한다. 다른 JSON/Mapping 단일 Editor의 React wrapper는 유지한다. Playwright CODEDIFF_TEST_PREVIEW=1은 빌드된 dist를 테스트한다.
 
 StrictMode의 시험 mount는 취소 가능한 microtask로 editor 생성 전에 종료해 버려진 인스턴스의 Worker 요청을 만들지 않는다. 실제 mount 시점에는 최신 props로 두 모델과 옵션을 초기화한다.
+
+## Phase 8 — Worker / UI 실행 경계
+
+`workers/protocol`은 typed 요청/결과, `execute`는 기존 독립 엔진 호출, `compute.worker`는 message transport만 담당한다. client별 Worker를 필요한 순간 만들고 종료/재시도/10초 wall timeout/idle30초 해제/요청id를 관리한다. `hooks/useCompute`는 debounce와 job identity, React generation 및 `WorkspaceActive`를 결합한다. 자동 계산은 hidden workspace에서 정지하고 명시적 작업은 snapshot 검증 후만 반영한다. 원본 File/디스크를 수정하지 않는다.
+
+Folder read/classification/relative matching은 기존 엔진에 남고 async text comparator를 주입한다. JSON 구조 의미론은 JSON 엔진, Syntax는 grammar/AST 엔진, Patch는 raw roundtrip 엔진을 그대로 사용한다. 원문과 알고리즘을 통합 normalizer로 합치지 않는다. JSON 명시 변환 및 Mapping 규칙 컴파일/내보내기 검증도 Worker에서 처리하며 clipboard/download는 사용자 클릭 후 main UI에서 수행한다.
+
+`stores/preferences`와 `DisplaySettings`는 세션 테마·MiniMap·패널 크기 및 모델/Worker 개수만 관리한다. CSS palette와 Monaco 테마를 함께 바꾸고 좁은 화면에는 Unified/1열/숨긴 MiniMap을 적용한다. `ManagedDiffEditor`는 공개 diff view model을 소유·동기 dispose해 이전 계산이 바뀐 문서를 참조하지 않게 한다. 텍스트 모델은 재사용하고 workspace state는 유지한다. 변경 목록100개 페이지와 상세20k자 cap은 UI 렌더링만 제한하며 원문 저장을 자르지 않는다.
+
+일반 Edge 회귀와 `playwright.performance.config.ts` 단일 Worker 측정은 분리한다. `CODEDIFF_TEST_PREVIEW=1`에서 실제 dist와 로컬 Worker/WASM을 검증한다. 성능 JSON의 main-target heap은 전체 브라우저/Worker 메모리가 아니다.

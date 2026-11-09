@@ -19,6 +19,11 @@ export function ManagedDiffEditor(props: Props) {
   const host = useRef<HTMLDivElement>(null);
   const instance = useRef<monaco.editor.IStandaloneDiffEditor>();
   const models = useRef<monaco.editor.IDiffEditorModel>();
+  const viewModel = useRef<monaco.editor.IDiffEditorViewModel>();
+  function applyMinimap(current: monaco.editor.IStandaloneDiffEditor) {
+    for (const editor of [current.getOriginalEditor(), current.getModifiedEditor()])
+      editor.updateOptions({ minimap: latest.current.options?.minimap ?? { enabled: false } });
+  }
   const latest = useRef(props);
   latest.current = props;
   const pending = useRef<ReturnType<typeof setTimeout>>();
@@ -39,10 +44,13 @@ export function ManagedDiffEditor(props: Props) {
       models.current = pair;
       current = monaco.editor.createDiffEditor(host.current!, {
         automaticLayout: true,
+        maxComputationTime: 1500,
         ...input.options,
       });
       instance.current = current;
-      current.setModel(pair);
+      viewModel.current = current.createViewModel(pair);
+      current.setModel(viewModel.current);
+      applyMinimap(current);
       if (input.theme) monaco.editor.setTheme(input.theme);
       setReady(true);
       input.onMount?.(current, monaco);
@@ -52,6 +60,8 @@ export function ManagedDiffEditor(props: Props) {
       clearTimeout(pending.current);
       pending.current = undefined;
       current?.setModel(null);
+      viewModel.current?.dispose();
+      viewModel.current = undefined;
       current?.dispose();
       pair?.original.dispose();
       pair?.modified.dispose();
@@ -71,8 +81,10 @@ export function ManagedDiffEditor(props: Props) {
       return;
     clearTimeout(pending.current);
     current.setModel(null);
-    // Monaco releases the previous diff view model in a setTimeout(0). Keep
-    // its texts alive and unchanged until that cancellation has completed.
+    // Own the public view model: cancel old computations synchronously rather
+    // than depending only on the editor's deferred reference release.
+    viewModel.current?.dispose();
+    viewModel.current = undefined;
     pending.current = setTimeout(() => {
       pending.current = undefined;
       const input = latest.current;
@@ -80,11 +92,14 @@ export function ManagedDiffEditor(props: Props) {
         pair.original.setValue(input.original ?? '');
       if (pair.modified.getValue() !== (input.modified ?? ''))
         pair.modified.setValue(input.modified ?? '');
-      current.setModel(pair);
+      viewModel.current = current.createViewModel(pair);
+      current.setModel(viewModel.current);
+      applyMinimap(current);
     }, 0);
   }, [props.original, props.modified]);
   useLayoutEffect(() => {
     instance.current?.updateOptions(props.options ?? {});
+    if (instance.current) applyMinimap(instance.current);
   }, [props.options]);
   useLayoutEffect(() => {
     if (models.current && props.language) {

@@ -1,21 +1,11 @@
+import { useNarrowScreen } from '../../hooks/useNarrowScreen';
+import { useCompute } from '../../hooks/useCompute';
+import { usePreferences } from '../../stores/preferences';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { useMappingWorkspace } from '../../stores/mappingWorkspace';
-import {
-  type Segment,
-  parseJson,
-  pathText,
-  stringify,
-  JSON_MAX_BYTES,
-} from '../../core/json/value';
-import {
-  applyMapping,
-  type MappingResult,
-  type MappingRule,
-  importMappingRules,
-  exportMappingRules,
-} from '../../core/mapping/engine';
-import { compileDrafts, type MappingDraft } from '../../core/mapping/drafts';
+import { type Segment, pathText, stringify, JSON_MAX_BYTES } from '../../core/json/value';
+import { type MappingRule, importMappingRules } from '../../core/mapping/engine';
 import { JsonTree } from '../json-tools/JsonTree';
 import { loadFile } from '../../core/file';
 import { downloadText } from '../../core/export';
@@ -23,56 +13,22 @@ export default function MappingWorkspace() {
   const state = useMappingWorkspace();
   const [selected, setSelected] = useState<Segment[]>([]),
     [active, setActive] = useState(state.rules[0]?.id ?? ''),
-    [snapshot, setSnapshot] = useState<{
-      source: string;
-      rules: MappingDraft[];
-      result: MappingResult;
-    }>(),
     [targetSelected, setTargetSelected] = useState<Segment[]>([]),
-    [busy, setBusy] = useState(true),
     [error, setError] = useState(''),
     [notice, setNotice] = useState(''),
     [importText, setImportText] = useState(''),
     [showImport, setShowImport] = useState(false);
   const uploadVersion = useRef({ source: 0, rules: 0 });
-  const parsed = useMemo(() => {
-    try {
-      return { value: parseJson(state.source), error: '' };
-    } catch (e) {
-      return { value: undefined, error: (e as Error).message };
-    }
-  }, [state.source]);
-  const compiled = useMemo(() => compileDrafts(state.rules), [state.rules]);
-  const result =
-    snapshot?.source === state.source && snapshot.rules === state.rules
-      ? snapshot.result
-      : undefined;
-  useEffect(() => {
-    setBusy(true);
-    setSnapshot(undefined);
-    setTargetSelected([]);
-    const timer = setTimeout(() => {
-      const setResult = (result: MappingResult) =>
-        setSnapshot({ source: state.source, rules: state.rules, result });
-      try {
-        if (parsed.error)
-          setResult({ errors: [{ message: parsed.error }], applied: 0, skipped: 0, excluded: 0 });
-        else if (compiled.errors.length)
-          setResult({ errors: compiled.errors, applied: 0, skipped: 0, excluded: 0 });
-        else setResult(applyMapping(parsed.value!, compiled.rules));
-      } catch (e) {
-        setResult({
-          errors: [{ message: (e as Error).message }],
-          applied: 0,
-          skipped: 0,
-          excluded: 0,
-        });
-      } finally {
-        setBusy(false);
-      }
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [parsed, compiled]);
+  const prefs = usePreferences();
+  const narrow = useNarrowScreen();
+  const job = useMemo(
+    () => ({ kind: 'mapping' as const, source: state.source, rules: state.rules }),
+    [state.source, state.rules],
+  );
+  const computation = useCompute(job);
+  const parsed = computation.result?.parsed ?? { value: undefined, error: computation.error };
+  const result = computation.result?.result;
+  const busy = computation.busy;
   useEffect(() => {
     if (!state.rules.some((r) => r.id === active)) setActive(state.rules[0]?.id ?? '');
   }, [state.rules, active]);
@@ -95,9 +51,9 @@ export default function MappingWorkspace() {
     }
   }
   function exportRules() {
-    if (compiled.errors.length)
-      throw new Error(compiled.errors.map((e) => `${e.ruleId ?? '규칙'}: ${e.message}`).join('\n'));
-    return exportMappingRules(compiled.rules);
+    if (computation.result?.exportError) throw new Error(computation.result.exportError);
+    if (!computation.result?.exportedRules) throw new Error('규칙 분석을 완료한 뒤 내보내세요.');
+    return computation.result.exportedRules;
   }
   function importRules(text: string) {
     const rules = importMappingRules(text);
@@ -194,19 +150,21 @@ export default function MappingWorkspace() {
             <Editor
               height="100%"
               language="json"
-              theme="vs-dark"
+              theme={prefs.theme === 'dark' ? 'vs-dark' : 'vs'}
               value={state.source}
               onChange={(v) => state.setSource(v ?? '')}
               options={{
                 ariaLabel: 'Mapping Source 편집기',
                 automaticLayout: true,
-                minimap: { enabled: false },
+                minimap: { enabled: prefs.minimap && !narrow },
                 wordWrap: 'on',
                 fontSize: 12,
               }}
             />
           </div>
-          {parsed.error ? (
+          {busy ? (
+            <p role="status">JSON·매핑 분석 중…</p>
+          ) : parsed.error ? (
             <p role="alert" className="mapping-source-error">
               {parsed.error}
             </p>
@@ -251,10 +209,14 @@ export default function MappingWorkspace() {
                 }}
               />
             </label>
-            <button onClick={() => run(() => downloadText(exportRules(), 'mapping-rules.json'))}>
+            <button
+              disabled={busy}
+              onClick={() => run(() => downloadText(exportRules(), 'mapping-rules.json'))}
+            >
               규칙 내보내기
             </button>
             <button
+              disabled={busy}
               onClick={() =>
                 run(() => {
                   void copy(exportRules());
@@ -476,7 +438,18 @@ export default function MappingWorkspace() {
               />
             </>
           )}
-          {busy && <p>입력과 규칙 변경 후 250ms에 다시 계산합니다.</p>}
+          {busy && (
+            <p role="status">
+              입력과 규칙 변경 후 로컬 Worker에서 계산합니다.
+              <button onClick={computation.cancel}>매핑 취소</button>
+            </p>
+          )}
+          {(computation.cancelled || computation.error) && (
+            <p role="status">
+              {computation.error || '매핑이 취소되었습니다.'}
+              <button onClick={computation.retry}>매핑 다시 계산</button>
+            </p>
+          )}
           <p>
             최대 입력/출력 1 MiB · 값 30,000개 · 깊이 80 · Target은 새로운 JSON이며 Source를
             변경하지 않습니다.

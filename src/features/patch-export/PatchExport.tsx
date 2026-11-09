@@ -1,12 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useComputeClient, WorkspaceActive } from '../../hooks/useCompute';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { useWorkspace } from '../../stores/workspace';
-import {
-  generatePatch,
-  type PatchInput,
-  type PatchOperation,
-  type VerifiedPatch,
-  verifyRawPatch,
-} from '../../core/patch/patch';
+import { type PatchInput, type PatchOperation, type VerifiedPatch } from '../../core/patch/patch';
 import { downloadText } from '../../core/export';
 export default function PatchExport({ onCompare }: { onCompare: () => void }) {
   const state = useWorkspace();
@@ -18,6 +13,8 @@ export default function PatchExport({ onCompare }: { onCompare: () => void }) {
     [error, setError] = useState(''),
     [notice, setNotice] = useState('');
   const [snapshot, setSnapshot] = useState<{ input: PatchInput; result: VerifiedPatch }>();
+  const client = useComputeClient();
+  const activeWorkspace = useContext(WorkspaceActive);
   const request = useRef(0),
     timer = useRef<ReturnType<typeof setTimeout>>();
   const input: PatchInput = {
@@ -38,23 +35,26 @@ export default function PatchExport({ onCompare }: { onCompare: () => void }) {
       : undefined;
   useEffect(() => {
     request.current++;
+    client.cancel();
     clearTimeout(timer.current);
     setBusy(false);
     setError('');
     setNotice('');
     return () => {
       clearTimeout(timer.current);
+      request.current++;
+      client.cancel();
     };
-  }, [input.original, input.modified, path, context, operation]);
+  }, [input.original, input.modified, path, context, operation, client, activeWorkspace]);
   function generate() {
     const version = ++request.current;
     setBusy(true);
     setError('');
     setNotice('');
     setSnapshot(undefined);
-    timer.current = setTimeout(() => {
+    timer.current = setTimeout(async () => {
       try {
-        const value = generatePatch(input);
+        const value = await client.run({ kind: 'patch', input });
         if (version === request.current) setSnapshot({ input, result: value });
       } catch (e) {
         if (version === request.current) setError((e as Error).message);
@@ -152,6 +152,19 @@ export default function PatchExport({ onCompare }: { onCompare: () => void }) {
           <button className="generate-patch" disabled={busy} onClick={generate}>
             {busy ? 'Patch 생성 중…' : 'Patch 생성 및 검증'}
           </button>
+          {busy && (
+            <button
+              onClick={() => {
+                ++request.current;
+                clearTimeout(timer.current);
+                client.cancel();
+                setBusy(false);
+                setError('Patch 생성이 취소되었습니다.');
+              }}
+            >
+              Patch 생성 취소
+            </button>
+          )}
         </div>
       </section>
       {error && (
@@ -178,13 +191,27 @@ export default function PatchExport({ onCompare }: { onCompare: () => void }) {
           </button>
           <button
             disabled={!enabled}
-            onClick={() => {
+            onClick={async () => {
               if (result) {
-                const verified = verifyRawPatch(input.original, input.modified, result.text);
-                if (verified.ok) setNotice(verified.message);
-                else {
-                  setSnapshot(undefined);
-                  setError(verified.message);
+                const version = ++request.current;
+                setBusy(true);
+                try {
+                  const verified = await client.run({
+                    kind: 'patchVerify',
+                    original: input.original,
+                    modified: input.modified,
+                    text: result.text,
+                  });
+                  if (version !== request.current) return;
+                  if (verified.ok) setNotice(verified.message);
+                  else {
+                    setSnapshot(undefined);
+                    setError(verified.message);
+                  }
+                } catch (error) {
+                  if (version === request.current) setError((error as Error).message);
+                } finally {
+                  if (version === request.current) setBusy(false);
                 }
               }
             }}

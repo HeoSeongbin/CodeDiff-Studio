@@ -1,7 +1,7 @@
 import { Parser, type Language, type Node } from 'web-tree-sitter';
 import { languageAdapters } from './adapters';
-export const syntaxLanguages = ['java', 'csharp', 'python', 'javascript', 'typescript'] as const;
-export type SyntaxLanguage = (typeof syntaxLanguages)[number];
+import type { SyntaxLanguage } from './languages';
+export { syntaxLanguages, type SyntaxLanguage } from './languages';
 export interface SymbolInfo {
   kind: 'class' | 'function' | 'import';
   name: string;

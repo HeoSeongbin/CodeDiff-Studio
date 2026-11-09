@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNarrowScreen } from '../../hooks/useNarrowScreen';
+import { useComputeClient, WorkspaceActive } from '../../hooks/useCompute';
+import { usePreferences } from '../../stores/preferences';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ManagedDiffEditor as DiffEditor } from '../../components/ManagedDiffEditor';
 import { useFolderWorkspace } from '../../stores/folderWorkspace';
 import {
@@ -23,6 +26,10 @@ const statusLabel = {
 };
 export default function FolderCompare({ onCompare }: { onCompare: () => void }) {
   const state = useFolderWorkspace();
+  const client = useComputeClient();
+  const activeWorkspace = useContext(WorkspaceActive);
+  const prefs = usePreferences();
+  const narrow = useNarrowScreen();
   const [excludeText, setExcludeText] = useState(state.options.excludes.join(',')),
     [extensionText, setExtensionText] = useState(state.options.extensions.join(','));
   const [snapshot, setSnapshot] = useState<{
@@ -44,6 +51,14 @@ export default function FolderCompare({ onCompare }: { onCompare: () => void }) 
   const controller = useRef<AbortController>(),
     request = useRef(0),
     treeView = useRef<HTMLDivElement>(null);
+  useEffect(() => setSideBySide(!narrow), [narrow]);
+  useEffect(() => {
+    if (!activeWorkspace) {
+      ++request.current;
+      controller.current?.abort();
+      setBusy(false);
+    }
+  }, [activeWorkspace]);
   const result =
     snapshot?.original === state.original &&
     snapshot?.modified === state.modified &&
@@ -103,6 +118,8 @@ export default function FolderCompare({ onCompare }: { onCompare: () => void }) 
     try {
       const value = await compareFolders(state.original, state.modified, state.options, {
         signal: abort.signal,
+        compare: (original, modified, options) =>
+          client.run({ kind: 'text', original, modified, options }, { signal: abort.signal }),
         onProgress: (done, total) => {
           if (version === request.current) setProgress({ done, total });
         },
@@ -498,14 +515,14 @@ export default function FolderCompare({ onCompare }: { onCompare: () => void }) 
                           original={row.original?.text ?? ''}
                           modified={row.modified?.text ?? ''}
                           language={detectLanguage(row.path)}
-                          theme="vs-dark"
+                          theme={prefs.theme === 'dark' ? 'vs-dark' : 'vs'}
                           options={{
                             readOnly: true,
                             originalEditable: false,
                             renderSideBySide: sideBySide,
                             useInlineViewWhenSpaceIsLimited: false,
                             automaticLayout: true,
-                            minimap: { enabled: false },
+                            minimap: { enabled: prefs.minimap && !narrow },
                             fontSize: 12,
                             scrollBeyondLastLine: false,
                             ignoreTrimWhitespace: state.options.ignoreWhitespace,

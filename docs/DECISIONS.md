@@ -186,3 +186,22 @@
 - 검증: 실제 WASM Node 테스트291개, production 전체 Edge E2E26개, TypeScript/ESLint/Build 통과. 5개 grammar HTTP200/304, readonly CRLF 원문 다운로드 일치, 실패 재시도, pageerror0, 기존 Text/JSON/Folder/Mapping/Patch 기능 회귀 확인. 큰 chunk/Tree-sitter glue eval·Node externalization/WASI 경고는 남는다.
 
 StrictMode 보완: 개발 모드의 시험 mount에서 즉시 Worker를 생성하고 해제하면 Canceled/no diff result available 오류가 발생했다. editor 생성은 취소 가능한 microtask로 미뤄 시험 mount에서는 Worker 요청 자체를 시작하지 않는다. 최종 개발/production 회귀 결과는 PROGRESS 최종 기록을 기준으로 한다.
+
+## ADR-019 · 2026-11-09 · 계산 Worker와 요청 수명
+
+- 선택: `workers/protocol.ts`의 typed job/reply, `execute.ts`의 엔진 어댑터, Vite ES module Worker, `ComputeClient`, `useCompute`를 분리한다. Text/inline/Syntax/JSON 파싱·구조 비교·변환/Mapping 컴파일·적용·규칙 직렬화/Patch 생성·재검증은 기존 코어를 Worker에서 호출한다. Folder 엔진은 async comparator를 주입받아 파일별 Text CPU 계산만 위임하며 경로·bytes·인코딩·오류 정책은 자체 엔진에 유지한다.
+- 대안: 모든 도구를 단일 Worker 큐로 직렬화하거나 main-thread fallback을 두는 방식. 선택한 client별 on-demand Worker는 새 요청이 이전 계산을 terminate하고 AbortError로 종료한다. 결과는 요청 id 및 입력 snapshot이 일치할 때만 사용한다. 실패·10초 wall timer·messageerror는 명시적 오류와 재시도를 제공하고 메인 스레드로 조용히 되돌리지 않는다. engine Text 예산1.5초와 Folder 전체15초는 유지한다. File.arrayBuffer 자체는 중단 불가능해 읽기 경계의 AbortSignal 검사도 유지한다.
+- 자원: 성공 Worker는 같은 client에서 재사용하고 idle30초 후 해제한다. 작업 공간 비활성화/입력 변경/unmount 시 timer·요청·Worker를 정리한다. Syntax grammar promise 캐시는 Worker 내부에만 존재하며 종료 시 같이 해제된다. 일반 탭의 입력·선택 상태는 세션 메모리에서 유지한다. 원본 문자열은 structured clone으로 전달하며 파일 객체/디스크/서버를 쓰지 않는다.
+- React: debounce(Text/Mapping250ms, JSON 파싱100ms), useMemo job identity, 결과 generation 검증을 결합한다. JSON 명시 변환은 입력·옵션 identity를 await 뒤 다시 확인해 나중에 입력된 내용을 덮어쓰지 않는다. async 변환 중 복사/저장을 비활성화해 이전 편집본을 저장하는 경합을 해결한다. 취소·오류를 파일 동일로 표시하지 않는다.
+- 최적화: Text의 줄 split/normalization key를 한 번 계산, 파일의 binary/줄 수 검사를 배열 생성 없는 순회로 변경, Code Compare 줄 수는 입력 변경 시만 계산. 변경 목록은100개 페이지, snippet200자, 상세는 양쪽각20k자까지 렌더한다. 전체 원문 다운로드는 자르지 않는다. JSON/Folder 기존 가상 목록을 유지한다. 언어 목록을 Syntax parser 구현에서 분리해 UI가 WASM binding을 로드하지 않게 했다.
+- 근거: [Vite Worker 번들링](https://vite.dev/guide/features#web-workers), [Worker terminate](https://developer.mozilla.org/en-US/docs/Web/API/Worker/terminate), [structured clone](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm).
+- 검증: worker lifecycle fake-port 테스트로 supersession/AbortSignal/오래된 id/idle/timeout/crash/clone 오류를 확인하고 엔진 통합으로 원문/EOL/JSON null·정밀도/Mapping/Patch 결과를 확인한다. 실제 브라우저 Worker·원본 파일 불변·취소/재시도는 E2E와 별도 성능 행렬로 검증한다. 최종 결과는 PROGRESS를 기준으로 한다.
+
+## ADR-020 · 2026-11-09 · 테마·레이아웃·Monaco 수명·성능 측정 범위
+
+- UI 상태: Zustand 세션 메모리에 Dark/Light·MiniMap·분석 폭240–480px·원본 비율30–60%·편집기 높이400–900px를 둔다. localStorage/파일 내용 자동 저장은 추가하지 않는다. CSS palette와 모든 Monaco 테마(vs-dark/vs)를 일치시킨다. 네이티브 select/range/checkbox 및 focus-visible/본문 이동 링크를 제공한다. 핵심 안내 텍스트 대비4.5:1 샘플을 [W3C 기준](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum)에 따라 확인하며 전체 WCAG 적합성 인증을 주장하지 않는다.
+- 반응형: 데이터 패널은 좁은 화면에서1열, 분석 폭은 viewport에 제한한다. 800px 이하에서 MiniMap을 숨기고 Code Compare는 수동 보기 선택 전까지 Unified 기본값을 적용한다. Folder/Syntax 미리보기도 좁은 화면에 맞춘다. Monaco Diff는 MiniMap을 내부적으로 끄므로 공개 inner editor updateOptions를 생성/재연결/옵션 변경 후 적용한다.
+- 모델: Phase7의 deferred detach만으로는 부하 시 오래된 diff 결과 경합이 남았다. 공개 createViewModel/setModel API로 IDiffEditorViewModel을 직접 소유하고 외부 snapshot 교체 전 dispose해 token/listener를 동기적으로 정리한다. 두 텍스트 모델은 재사용해 undo·원문 EOL·할당량을 보존하고 교체 시 필요한 쪽만 setValue한다. StrictMode의 버려진 mount는 취소 가능한 microtask로 생성 전 무효화한다. unmount는 timer→detach→view model→editor→두 text model 순서로 정리한다. Monaco 시각 Diff도1.5초 예산을 둔다.
+- 탭 정책: 열린 workspace의 Monaco model/입력/뷰 상태는 보존하고 계산 Worker는 비활성화 때 종료한다. 화면 설정의 모델·계산 Worker 개수는 메타데이터만 보여 주며 전체 메모리 사용량의 대체 지표가 아니다. 화면 전환·옵션 조절 후 모델 개수가 증가하지 않는지 E2E로 검증한다.
+- 성능: 별도 Playwright config/test:perf를 단일 Edge worker로 실행한다. 100/1k/10k/50k줄, 500k/5MiB 단일 행, 반복/다수 변경, 취소, 20k값 JSON/구조 비교, 500파일을 다룬다. 업로드·debounce·메시지·UI 결과까지 wall time,16ms timer 간격, forced-GC 후 CDP main-target JS heap, 렌더 행/모델 수를 JSON으로 기록한다. Worker/native/GPU 메모리·실제 키보드 입력 지연·통계적 반복 측정은 포함하지 않는다. 한 환경의 관측값은 다른 기기의 SLA가 아니다.
+- 범위: main Monaco chunk 경고는 유지되며 현재 Phase의 CPU·메모리·목록·UI 수명 개선과 구분한다. CI/배포·다른 OS/브라우저는 Phase9에서 검토한다. 최종 측정값은 docs/phase8-performance.json/PROGRESS를 기준으로 한다.

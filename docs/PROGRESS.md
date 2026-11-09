@@ -4,7 +4,7 @@
 
 ## 현재 Phase
 
-Phase 7 — Syntax Compare 구현·검증 완료. 기존 보류 원인을 해결하고 Production Build 및 전체 Edge E2E를 통과했다. 다음은 Phase 8 — 성능 및 UI/UX이며 이번 세션은 Phase 7 마무리 범위에서 종료한다. 이전 기록은 당시 이력이며 최신 상태는 하단 Phase 7 최종 검증 기록을 기준으로 한다.
+Phase 8 — 성능 및 UI/UX 구현·검증 완료. 다음은 Phase 9 — 통합 테스트 및 배포. 이번 세션은 Phase 8 범위에서 종료하며 CI/배포는 수행하지 않았다. 이전 기록은 당시 이력이며 최신 상태는 하단 Phase 8 기록을 기준으로 한다.
 
 ## 완료 작업
 
@@ -40,15 +40,15 @@ Phase 7 — Syntax Compare 구현·검증 완료. 기존 보류 원인을 해결
 
 - Monaco 시각 diff와 jsdiff 분석 목록은 독립 엔진. 모든 공백/대소문자/EOL 옵션 결과가 Monaco 강조와 다를 수 있어 화면 및 README에 안내.
 - npm audit: dev-only minimatch 전이 의존성에 moderate 10건 남음. 호환 범위 audit fix로 해결되지 않음. 무리한 강제 downgrade/override는 하지 않았으며 후속 의존성 업데이트 필요. critical/high 0건.
-- Worker 기반 Text Diff 계산·취소·대용량 성능 검증은 Phase 8. 현재 main-thread 250ms debounce, 1.5초 계산 timeout. 5 MiB는 측정된 성능 보장이 아닌 임시 상한.
-- Light 테마, MiniMap, 배포는 미구현. AST는 Phase 7에서 구현했다. Folder Compare는 Phase 6에서 구현했다. Patch Export는 Phase 5에서 구현했다. Field Mapping은 Phase 4에서 구현했다. JSON Tools는 Phase 3에서 구현했다. Unified와 코드 다운로드는 Phase 2에서 구현했다.
-- Git 저장소는 Phase 2 이후 초기화 및 origin/main 연결·푸시 완료 (최신 Phase 3·4 커밋 2382739). 배포는 미수행. 아래 Phase 1·2의 Git 미초기화 표기는 당시 이력이다.
+- Phase 8에서 Worker 기반 계산·취소와 대용량 성능 행렬을 검증했다. Text250ms/JSON100ms debounce, Worker wall10초·Text/Monaco1.5초·Folder15초 예산. 5MiB는 보호 한도이며 모든 기기·입력 조합의 성능 보장은 아니다. 상세 관측값은 PERFORMANCE/JSON 기록 참조.
+- Light 테마·MiniMap·패널 조절·키보드/반응형 개선은 Phase 8에서 구현했다. 배포는 미구현. AST는 Phase 7에서 구현했다. Folder Compare는 Phase 6에서 구현했다. Patch Export는 Phase 5에서 구현했다. Field Mapping은 Phase 4에서 구현했다. JSON Tools는 Phase 3에서 구현했다. Unified와 코드 다운로드는 Phase 2에서 구현했다.
+- Git 저장소는 Phase 2 이후 초기화 및 origin/main 연결·푸시 완료 (시작 시 최신 커밋 5876a9f, main이 origin/main보다2개 앞섬). 배포는 미수행. 아래 Phase 1·2의 Git 미초기화 표기는 당시 이력이다.
 - E2E 실행 환경은 Edge 필요. 다른 OS는 playwright.config.ts의 channel 변경 또는 Chromium 설치 필요.
 - 배포 환경 및 모바일 실기기 미검증.
 
 ## 다음 작업
 
-다음 세션은 Phase 8에서 Worker 기반 비교·취소, 대용량 성능, Monaco 자원 관리, Dark/Light·레이아웃 조절·접근성을 진행한다. 필수 문서·Git·기존 기능 상태를 확인하고 실제 측정·검증한 항목만 완료 처리한다. Phase 7의 AST 파싱은 의미론적 정확성 판정이 아니다.
+다음 세션은 Phase 9 — 통합 테스트 및 배포. 필수 문서·Git·실제 코드/테스트를 대조하고 통합 테스트 확대·GitHub Actions/Pages 배포를 진행한다. 원문 전송 금지와 미검증 완료 금지 원칙을 유지한다. 이번 Phase 8 변경은 아직 커밋·푸시하지 않았다.
 
 ## Phase 2 · 2026-11-06 · 이번 세션
 
@@ -343,3 +343,46 @@ AGENTS/PROJECT/PROGRESS/DECISIONS/README, 실제 소스 및 jsdiff의 create/app
 - main-thread Syntax 처리·정적 보호 예산이며 hard latency/Worker 취소·성능 보장은 Phase8에서 다룬다. 익명/화살표 함수 변수, TSX, 최신 문법/의미론 전체 지원 아님. 선언 노드 밖 decorator 등은 AST 결과에 포함되지 않을 수 있으므로 원문 Diff를 함께 확인한다.
 - 실제 GitHub Pages, 다른 OS/브라우저, 모바일 실기기는 미검증. 환경별 Monaco 수명 검증은 버전 변경 시 다시 수행한다.
 - **다음: Phase8 — 성능 및 UI/UX**. 필수 문서·Git 상태 확인 후 Worker 기반 비교/취소·성능 측정, 자원 관리, Dark/Light, 조절 가능한 레이아웃·접근성을 구현한다. 이번에는 Phase8 기능을 추가하지 않는다.
+
+
+## Phase 8 — 2026-11-09 · 성능 및 UI/UX 완료
+
+### 시작 상태와 문서 대조
+
+- AGENTS/PROJECT/PROGRESS/DECISIONS/README, 실제 소스와 Git 확인. main의 최신 커밋5876a9f, origin/main보다2개 앞섬, 변경 없음. Phase7 구현·완료 문서와 소스 일치, 시작 테스트291/291 통과.
+- README 상단의 Syntax 미제공/Light·Worker 후속 안내는 실제 Phase7 상태와 달라 실제 기능에 맞게 갱신했다. 과거 Phase 절의 당시 테스트/미커밋 문장은 이력으로 보존한다.
+
+### 구현 / 변경 파일
+
+- `workers/{protocol,execute,compute.worker,client}` 및 `hooks/useCompute`: Text/inline/Syntax/JSON 파싱·구조·변환/Mapping 컴파일·적용·규칙 직렬화/Patch 생성·재검증 Worker 실행. 요청id·snapshot·AbortSignal, 새 요청의 강제 종료, 오류/10초 timeout·재시도, idle30초 해제, hidden/unmount 취소. 실패를 main-thread로 fallback하거나 동일로 간주하지 않음.
+- `core/folder/engine`에 async comparator 주입. File IO/경로/byte/encoding 책임은 기존 Folder 엔진에 유지. 읽기 자체는 중단하지 못하므로 경계 검사와 전체15초 예산 유지.
+- `core/diff`는 split·정규화 key 재사용, `core/file`는 배열 없는 binary/줄 수 scan, CodeCompare는 줄 수 메모이제이션. 원문/EOL/공백 규칙과 다운로드 불변. `core/syntax/languages` 분리로 parser/WASM은 Worker에서만 로딩.
+- `stores/preferences`, `DisplaySettings`, `useNarrowScreen`, App/CSS/각 workspace: Dark/Light 일치, MiniMap, 분석 폭/데이터 비율/편집기 높이 조절·초기화, 세션 전용 설정, 본문 이동·native keyboard controls·focus/aria·핵심 텍스트 대비, 작은 화면1열/Unified 및 MiniMap 숨김.
+- `ManagedDiffEditor` 공개 view model 소유·동기 dispose, 텍스트 모델 재사용·StrictMode 취소·unmount 정리. MiniMap은 inner editor 공개 옵션으로 적용. 모델·계산 Worker 개수 HUD, 탭/테마 전환 후 모델 수 유지 검증.
+- 변경 목록100개 page·선택 따라가기, snippet200자·상세 양쪽20k자 cap. 원문 저장은 무제한이 아니라 기존5MiB 입력 한도 내 전체 문자열을 보존한다.
+
+### 발견·해결한 문제
+
+- 공용 ResultList CSS 이름이 hidden Code 목록과 JSON 목록 선택자를 충돌시켜 className을 분리했다.
+- 부하 시 과거 Monaco diff view model이 새 줄 수를 참조하는 경합을 공개 createViewModel/dispose 소유권으로 해결했다. 이전 비동기 detach만 의존하지 않는다.
+- Monaco Diff가 MiniMap을 내부에서 강제 비활성화해 공개 inner editor 옵션을 적용했다. 화면이 좁을 때는 설정을 보존하고 실제 MiniMap을 숨긴다.
+- async Minify 완료 전 저장하면 이전 편집본이 저장되는 경합: 변환 중 copy/save 비활성화 및 입력/옵션 변경 시 결과 폐기. 새 입력 업로드 시 오래된 변환이 덮어쓰지 않는 E2E 추가.
+- JSON 계산 중/실패 때 변경0을 동일로 안내하던 조건은 정상 parse·계산 완료 시에만 동일 안내하도록 수정했다. 취소/오류를 정상 결과로 완료하지 않는다.
+- 이미 abort된 새 요청이 idle 해제 timer를 지우는 수명 문제를 수정하고30초 후 Worker 종료를 단위 테스트했다.
+- 대용량 취소 테스트가 이미 교체된 Worker의 close를 기다리던 fixture를 현재 Worker 관측으로 수정했다. JSON 신규 입력 fixture의 bulk keyboard 입력이 잘못된 JSON을 남기던 문제는 명시적 새 입력 업로드로 보완했다.
+
+### 검증
+
+- npm test **311/311 통과** (기존291 + Worker/엔진·파일 scan18 + Folder async 경계2).
+- npm run typecheck / npm run lint / npm run build 통과.
+- Production Edge E2E **31/31 통과** (기존26 + Phase8 5). 실제 Worker 오류/재시도/종료·raw CRLF 다운로드·새 JSON 입력 보존, Dark/Light/MiniMap/패널·핵심 안내 대비4.5:1·키보드·모바일 overflow·모델 개수 유지 및 기존 모든 기능 회귀.
+- 개발 모드 기존26개와 Phase8 기존4개 통과. 신규 입력 fixture 보완 후 Phase8 전체5/5 재검증 통과. 전체 WCAG 적합성이나 모든 보조기기 동작을 검증한 것은 아니다.
+- npm run test:perf production 단일 Edge **1/1 통과**,12시나리오. 100/1k/10k/50k줄,500k/5MiB 단일 행,반복/다중 변경,취소,20k JSON/구조 diff,500파일. 정확한 최종 수치는 PERFORMANCE.md 및 phase8-performance.json 참조. 외부 요청0/pageerror0, 모델6개, 목록100/JSON24/폴더28 DOM 확인.
+- phase8-light-desktop.png / phase8-dark-mobile.png 생성·시각 검토. 이전 Phase 이미지는 회귀 자동 생성본을 제외하고 원래 커밋 버전을 유지한다. 작은 화면 설정 메뉴의 화면 밖 배치를 보완한 뒤 Phase8 production 전체5/5 추가 검증. 새 외부 의존성·서버·CI·배포 없음.
+
+### 남은 한계 / 다음 작업
+
+- 5MiB 원문 구성 단계에는 약270ms 메인 이벤트 루프 지연 관측. File IO·structured clone·Monaco 모델·JSON 트리 투영·렌더까지 모두 main-thread 비용0이 되는 것은 아니다. main heap 관측은 Worker/native/GPU 및 순간 peak를 제외하고 한 환경의 시나리오별1회 표본이다. 입력 크기 보호 한도를 모든 입력·기기 SLA로 해석하지 않는다.
+- Monaco 본체 약3.53MB/TS Worker 약6MB의 기존 chunk 경고, Tree-sitter glue eval/Node externalization, Tailwind WASI 경고 유지. 기존 dev audit moderate10 이력 유지, 신규 dependency/audit 조회 없음.
+- 다른 OS/브라우저·모바일 실기기·실제 배포는 미검증. 긴 단일 행에는 Monaco 자체 시각 한도와 상세 cap이 있으며 원문 다운로드는 보존한다. AST 지원 범위/rename 후보 한계는 Phase7과 동일하다.
+- 다음은 Phase9 통합 테스트·Actions/Pages 배포. 이번 변경은 미커밋·미푸시이며 현재 Phase를 검증하고 종료한다.

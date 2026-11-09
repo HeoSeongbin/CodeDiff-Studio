@@ -219,6 +219,13 @@ export async function compareFolders(
     signal?: AbortSignal;
     onProgress?: (done: number, total: number) => void;
     yieldControl?: () => Promise<void>;
+    compare?:
+      | typeof compareText
+      | ((
+          original: string,
+          modified: string,
+          options: Parameters<typeof compareText>[2],
+        ) => Promise<ReturnType<typeof compareText>>);
   } = {},
 ): Promise<FolderResult> {
   const start = performance.now(),
@@ -267,11 +274,15 @@ export async function compareFolders(
         row.removed = 0;
       } else if (row.kind === 'text') {
         try {
-          const diff = compareText(old?.file.text ?? '', next?.file.text ?? '', {
-            ignoreWhitespace: options.ignoreWhitespace,
-            ignoreCase: false,
-            ignoreEol: false,
-          });
+          const diff = await (hooks.compare ?? compareText)(
+            old?.file.text ?? '',
+            next?.file.text ?? '',
+            {
+              ignoreWhitespace: options.ignoreWhitespace,
+              ignoreCase: false,
+              ignoreEol: false,
+            },
+          );
           row.added = diff.added;
           row.removed = diff.removed;
           if (old && next) {
@@ -288,6 +299,8 @@ export async function compareFolders(
             else if (row.ignoredWhitespace) row.note = '공백 옵션에서 동일 · 원본 바이트는 다름';
           }
         } catch (e) {
+          if (hooks.signal?.aborted)
+            throw new DOMException('폴더 비교가 취소되었습니다.', 'AbortError');
           row.status = 'ERROR_FILE';
           row.kind = 'error';
           row.note = (e as Error).message;

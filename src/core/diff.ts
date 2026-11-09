@@ -33,17 +33,19 @@ export function compareText(original: string, modified: string, options: DiffOpt
     if (options.ignoreCase) value = value.toLowerCase();
     return value;
   };
-  const tokens = (text: string) =>
-    split(text)
-      .map((content, index) => ({ content, number: index + 1 }))
+  const oldLines = split(original),
+    newLines = split(modified);
+  const tokens = (lines: string[]) =>
+    lines
+      .map((content, index) => ({ content, key: normalize(content), number: index + 1 }))
       .filter(
         (line) =>
           !options.ignoreBlankLines || line.content.replace(/\r\n|\r|\n/g, '').trim() !== '',
       );
-  const old = tokens(original),
-    next = tokens(modified);
+  const old = tokens(oldLines),
+    next = tokens(newLines);
   const parts = diffArrays(old, next, {
-    comparator: (a, b) => normalize(a.content) === normalize(b.content),
+    comparator: (a, b) => a.key === b.key,
     timeout: 1500,
   });
   if (!parts) throw new Error('비교 시간 제한을 초과했습니다. 입력을 줄여 주세요.');
@@ -61,8 +63,8 @@ export function compareText(original: string, modified: string, options: DiffOpt
     if (!current) {
       current = {
         id: `change-${hunks.length + 1}`,
-        oldStart: old[oldIndex]?.number ?? split(original).length + 1,
-        newStart: next[newIndex]?.number ?? split(modified).length + 1,
+        oldStart: old[oldIndex]?.number ?? oldLines.length + 1,
+        newStart: next[newIndex]?.number ?? newLines.length + 1,
         oldLines: 0,
         newLines: 0,
         lines: [],
@@ -92,7 +94,7 @@ export function compareText(original: string, modified: string, options: DiffOpt
     hunks,
     added: hunks.reduce((n, h) => n + h.newLines, 0),
     removed: hunks.reduce((n, h) => n + h.oldLines, 0),
-    totalLines: split(original).length + split(modified).length,
+    totalLines: oldLines.length + newLines.length,
     duration: performance.now() - start,
   };
 }

@@ -40,7 +40,15 @@ export function detectLanguage(name: string) {
   return languages[name.split('.').pop()?.toLowerCase() ?? ''] ?? 'plaintext';
 }
 export function lineCount(text: string) {
-  return text === '' ? 0 : text.split(/\r\n|\r|\n/).length;
+  if (!text) return 0;
+  let count = 1;
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) === 13) {
+      count++;
+      if (text.charCodeAt(i + 1) === 10) i++;
+    } else if (text.charCodeAt(i) === 10) count++;
+  }
+  return count;
 }
 export function decodeFile(bytes: Uint8Array, encoding = 'auto') {
   if (bytes.length > MAX_BYTES) throw new Error('파일 크기 제한은 5 MiB입니다.');
@@ -58,13 +66,11 @@ export function decodeFile(bytes: Uint8Array, encoding = 'auto') {
   } catch {
     throw new Error('인코딩 오류: 올바른 인코딩을 선택한 뒤 다시 업로드하세요.');
   }
-  if (
-    Array.from(text).some((char) => {
-      const code = char.charCodeAt(0);
-      return code <= 8 || (code >= 14 && code <= 31);
-    })
-  )
-    throw new Error('바이너리 또는 지원하지 않는 텍스트 파일입니다.');
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    if (code <= 8 || (code >= 14 && code <= 31))
+      throw new Error('바이너리 또는 지원하지 않는 텍스트 파일입니다.');
+  }
   return { text, encoding: label };
 }
 export async function loadFile(file: File, encoding = 'auto') {

@@ -3,10 +3,12 @@ export function ResultList<T>({
   items,
   render,
   selectedIndex,
+  className = 'json-change-list',
 }: {
   items: T[];
   render: (item: T, index: number) => ReactNode;
   selectedIndex?: number;
+  className?: string;
 }) {
   const [page, setPage] = useState(0);
   const pages = Math.max(1, Math.ceil(items.length / 100));
@@ -17,7 +19,7 @@ export function ResultList<T>({
   }, [selectedIndex]);
   return (
     <>
-      <div className="json-change-list">
+      <div className={className}>
         {items
           .slice(active * 100, active * 100 + 100)
           .map((item, i) => render(item, active * 100 + i))}

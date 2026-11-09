@@ -1,14 +1,12 @@
-import { useRef, useState } from 'react';
+import { useNarrowScreen } from '../../hooks/useNarrowScreen';
+import { useContext, useEffect, useRef, useState } from 'react';
 import type { editor } from 'monaco-editor';
 import { ManagedDiffEditor as DiffEditor } from '../../components/ManagedDiffEditor';
 import { useWorkspace } from '../../stores/workspace';
-import {
-  compareSyntax,
-  syntaxLanguages,
-  type SyntaxLanguage,
-  type SyntaxResult,
-} from '../../core/syntax/compare';
-import { loadSyntaxLanguage } from '../../core/syntax/browser';
+import { syntaxLanguages, type SyntaxLanguage } from '../../core/syntax/languages';
+import type { SyntaxResult } from '../../core/syntax/compare';
+import { useComputeClient, WorkspaceActive } from '../../hooks/useCompute';
+import { usePreferences } from '../../stores/preferences';
 import { ResultList } from '../json-tools/ResultList';
 export default function SyntaxWorkspace() {
   const { original, modified, language } = useWorkspace();
@@ -23,22 +21,34 @@ export default function SyntaxWorkspace() {
     error?: string;
   }>();
   const [busy, setBusy] = useState(false);
+  const client = useComputeClient();
+  const activeWorkspace = useContext(WorkspaceActive);
+  const prefs = usePreferences();
+  const narrow = useNarrowScreen();
   const generation = useRef(0);
   const diff = useRef<editor.IStandaloneDiffEditor>();
   const current =
     state?.before === original.text && state.after === modified.text && state.language === selected;
+  useEffect(() => {
+    ++generation.current;
+    client.cancel();
+    setBusy(false);
+    return () => {
+      ++generation.current;
+      client.cancel();
+    };
+  }, [client, original.text, modified.text, selected, activeWorkspace]);
   async function run() {
     const version = ++generation.current;
     const snapshot = { before: original.text, after: modified.text, language: selected };
     setBusy(true);
     try {
-      const grammar = await loadSyntaxLanguage(selected as SyntaxLanguage);
-      const result = compareSyntax(
-        snapshot.before,
-        snapshot.after,
-        grammar,
-        selected as SyntaxLanguage,
-      );
+      const result = await client.run({
+        kind: 'syntax',
+        original: snapshot.before,
+        modified: snapshot.after,
+        language: selected as SyntaxLanguage,
+      });
       if (version === generation.current) setState({ ...snapshot, result });
     } catch (error) {
       if (version === generation.current)
@@ -68,6 +78,17 @@ export default function SyntaxWorkspace() {
       <button disabled={!supported || busy} onClick={run}>
         {busy ? '분석 중…' : '구문 비교 실행'}
       </button>
+      {busy && (
+        <button
+          onClick={() => {
+            ++generation.current;
+            client.cancel();
+            setBusy(false);
+          }}
+        >
+          구문 분석 취소
+        </button>
+      )}
       <p>
         공백·주석만의 변경은 AST 목록에서 제외됩니다. 화살표 함수 변수·익명 함수·TSX는 지원 범위
         밖이며 Text Diff에서 확인하세요. 클래스 본문 변경과 내부 메서드 변경은 각각 표시됩니다.
@@ -124,16 +145,17 @@ export default function SyntaxWorkspace() {
         Text Diff · {original.name} / {modified.name}
       </h2>
       <DiffEditor
-        height="480px"
+        height={prefs.editorHeight}
         language={language}
         original={original.text}
         modified={modified.text}
-        theme="vs-dark"
+        theme={prefs.theme === 'dark' ? 'vs-dark' : 'vs'}
         options={{
           readOnly: true,
+          renderSideBySide: !narrow,
           originalEditable: false,
           automaticLayout: true,
-          minimap: { enabled: false },
+          minimap: { enabled: prefs.minimap && !narrow },
         }}
         onMount={(instance) => {
           diff.current = instance;

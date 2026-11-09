@@ -423,3 +423,31 @@ describe('folder per-file calculation failures', () => {
     }
   });
 });
+
+describe('asynchronous folder comparator boundary', () => {
+  it('uses injected asynchronous comparison without changing raw stats', async () => {
+    const comparator = vi.fn(async (old: string, next: string, options: textEngine.DiffOptions) =>
+      textEngine.compareText(old, next, options),
+    );
+    const value = await compareFolders(
+      folder([file('a.txt', '한글\r\n')]),
+      folder([file('a.txt', '다름\r\n')]),
+      opts(),
+      { compare: comparator, yieldControl: () => Promise.resolve() },
+    );
+    expect(comparator).toHaveBeenCalledOnce();
+    expect(value.rows[0]).toMatchObject({ status: 'MODIFIED_FILE', added: 1, removed: 1 });
+  });
+  it('propagates cancellation during CPU comparison instead of reporting an error file', async () => {
+    const abort = new AbortController();
+    await expect(
+      compareFolders(folder([file('a.txt', 'old')]), folder([file('a.txt', 'new')]), opts(), {
+        signal: abort.signal,
+        compare: async () => {
+          abort.abort();
+          throw new DOMException('cancel', 'AbortError');
+        },
+      }),
+    ).rejects.toMatchObject({ name: 'AbortError' });
+  });
+});

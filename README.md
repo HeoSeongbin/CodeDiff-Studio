@@ -1,6 +1,6 @@
 # CodeDiff Studio
 
-브라우저에서 소스 코드 비교·JSON 분석·필드 매핑을 로컬로 수행하는 React + TypeScript 개발 도구. 검증 완료 범위는 **Phase 0–7**입니다. 전체 요구사항은 [PROJECT.md](PROJECT.md)를 참고하세요.
+브라우저에서 소스 코드 비교·JSON 분석·필드 매핑을 로컬로 수행하는 React + TypeScript 개발 도구. 검증 완료 범위는 **Phase 0–8**입니다. 전체 요구사항은 [PROJECT.md](PROJECT.md)를 참고하세요.
 
 ## 실행
 
@@ -31,7 +31,7 @@ npm run build
 - 원문 기반 Unified Patch 생성·적용 검증·미리보기·복사·.diff/.patch 저장
 - Folder Compare: 실제 폴더 선택·상대 경로 매칭·가상 트리·파일별 Diff·통계·메타데이터 보고서
 - Code Compare / JSON Tools / Field Mapping / Patch Export / Folder Compare 작업 공간 전환 및 메모리 상태 유지
-- 한국어 Dark UI, 작은 화면 대응. 파일·코드는 외부로 전송하거나 영구 저장하지 않습니다.
+- 한국어 Dark/Light UI, MiniMap, 패널 크기 조절, 키보드 설정·본문 이동, 모바일 Unified 기본 보기. 파일·코드는 외부로 전송하거나 영구 저장하지 않습니다.
 
 ## 비교 방법
 
@@ -45,9 +45,9 @@ Java, C#, Python, Go, Kotlin, Rust, C/C++, HTML, CSS, SCSS, JS/JSX, TS/TSX, Vue,
 
 jsdiff 원문 줄 토큰에 비교 옵션을 적용하고 실제 원문은 보존합니다. 수정은 같은 블록의 삭제·추가를 묶은 추정이며 이동 감지는 없습니다. Monaco 시각 강조와 분석 엔진은 독립적입니다. Monaco 공백 무시는 줄끝 공백 기준이며 분석 목록의 모든 공백 무시, 대소문자/EOL 옵션과 다를 수 있습니다. 빈 줄 무시 역시 분석 목록에 적용되며, 변경 상세는 원문을 표시합니다. 변경 영역 접기는 Monaco 결과 기준입니다. 화면에도 이를 안내합니다.
 
-업로드 크기 정보는 업로드 시점 바이트 수입니다. BOM 없는 UTF16은 수동 선택해야 합니다. 각 파일의 저장 (UTF-8)은 현재 편집본을 BOM 없는 UTF-8로 다운로드합니다. 비교 옵션은 저장 내용에 영향을 주지 않습니다. 편집 전에는 업로드 텍스트의 혼합 개행도 보존하며, 편집 이후 Monaco가 파일 전체 개행을 모델의 형식으로 통일할 수 있습니다. 대용량 Worker·성능 측정, Light 모드, MiniMap은 후속 단계입니다.
+업로드 크기 정보는 업로드 시점 바이트 수입니다. BOM 없는 UTF16은 수동 선택해야 합니다. 각 파일의 저장 (UTF-8)은 현재 편집본을 BOM 없는 UTF-8로 다운로드합니다. 비교 옵션은 저장 내용에 영향을 주지 않습니다. 편집 전에는 업로드 텍스트의 혼합 개행도 보존하며, 편집 이후 Monaco가 파일 전체 개행을 모델의 형식으로 통일할 수 있습니다. 주요 계산은 로컬 Worker에서 처리하며 테마·MiniMap·패널 설정은 상단 화면 설정에서 조절합니다. 큰 단일 행의 상세 미리보기는 양쪽 각각 20,000자까지 표시하지만 저장 원문은 자르지 않습니다.
 
-Syntax Compare는 아직 제공하지 않습니다. Code Compare의 Folder/JSON 레일 아이콘은 각각 실제 작업 공간으로 연결됩니다. 배포 주소는 아직 없으며 GitHub Pages 및 Actions는 Phase 9 예정입니다. Vite base는 상대 경로로 설정했습니다.
+Syntax Compare는 Java/C#/Python/JavaScript/TypeScript의 구문 비교를 제공합니다. Code Compare의 Folder/JSON 레일 아이콘은 각각 실제 작업 공간으로 연결됩니다. 배포 주소는 아직 없으며 GitHub Pages 및 Actions는 Phase 9 예정입니다. Vite base는 상대 경로로 설정했습니다.
 
 ## 화면
 
@@ -153,7 +153,7 @@ Phase 5 검증: **229/229 테스트** (실제 Git 호환성 15개 포함), **Edg
 - **Code Compare로 복사**는 현재 두 코드 입력을 선택 파일로 명시적으로 교체합니다. 없는 쪽은 빈 입력이며, 새로운 모델로 EOL을 감지합니다. 이후 편집은 메모리 상태만 바꾸며 업로드 원본·폴더 snapshot을 수정하지 않습니다. Monaco 시각 강조와 모든 공백 무시 통계는 다른 정책일 수 있습니다.
 - **전체 결과 JSON 저장** / **표시 목록 JSON 저장**은 파일 내용 없이 경로·상태·메타데이터·줄 통계·옵션을 내보냅니다. `statsScope: all-compared-files`와 전체 통계를 유지하고 `exportedRows`와 files로 실제 내보낸 subset을 표시합니다. 검색 필터는 전체 통계를 바꾸지 않습니다.
 
-폴더 선택/비교 옵션 변경 시 이전 결과와 저장을 즉시 무효화합니다. 비교 중 진행률·취소를 지원하며 오래된 요청은 무시하고 이전 결과 메모리를 해제합니다. File.arrayBuffer 읽기와 각 파일의 동기 Diff는 즉시 중단할 수 없어 취소·전체 15초 예산은 파일/await 경계에서 확인합니다. 입력은 폴더당 필터 전 메타데이터 20,000개, 필터 후 파일 1,000개, 읽을 파일 합계 20 MiB, 파일당 5 MiB를 보호 한도로 둡니다. 초과 단일 파일은 읽지 않고 오류 행으로 표시하며, 초과 eligible 합계/경로 충돌은 전체 비교를 중단합니다. 이는 Phase 8 성능 측정을 대신하는 지연시간 보장이 아닙니다.
+폴더 선택/비교 옵션 변경 시 이전 결과와 저장을 즉시 무효화합니다. 비교 중 진행률·취소를 지원하며 오래된 요청은 무시하고 이전 결과 메모리를 해제합니다. Text CPU 비교는 Worker에서 실행하고 취소 시 종료합니다. File.arrayBuffer 자체는 중단할 수 없어 읽기 경계의 취소 검사와 전체 15초 예산도 유지합니다. 입력은 폴더당 필터 전 메타데이터 20,000개, 필터 후 파일 1,000개, 읽을 파일 합계 20 MiB, 파일당 5 MiB를 보호 한도로 둡니다. 초과 단일 파일은 읽지 않고 오류 행으로 표시하며, 초과 eligible 합계/경로 충돌은 전체 비교를 중단합니다. 이 한도는 보호 예산이며 모든 입력·기기의 지연시간 보장이 아닙니다. 실제 측정 범위는 하단 Phase 8과 [성능 기록](docs/PERFORMANCE.md)을 확인하세요.
 
 최종 Phase 6 검증: **271/271 테스트**, **Edge E2E 18/18**, TypeScript·ESLint·Production Build 통과. 네이티브 폴더 선택, 오류·binary·삭제/추가·case·기본 제외·300/350 파일 비교·가상 DOM·취소·실제 결과 다운로드·원본 파일 불변·390px 화면을 검증했습니다. 기존 Monaco 큰 chunk 경고가 남아 있으며 새 외부 의존성은 없습니다. 다음은 Phase 7 — Syntax Compare입니다.
 
@@ -163,7 +163,7 @@ Phase 5 검증: **229/229 테스트** (실제 Git 호환성 15개 포함), **Edg
 
 Code Compare에 두 원문을 준비하고 Syntax Compare → 언어 자동/수동 선택 → 구문 비교 실행을 사용합니다. Java, C#, Python, JavaScript, TypeScript별 로컬 Tree-sitter WASM을 사용합니다. 클래스·선언형 함수·메서드·생성자·import의 추가/삭제, 매개변수·선언·본문 변경을 목록으로 표시하고 클릭하면 읽기 전용 Text Diff의 해당 줄로 이동합니다. 입력 변경 시 이전 결과를 숨깁니다.
 
-이름 변경은 같은 scope에서 매개변수·본문이 동일한 유일 조합의 **후보**입니다. 이동·의미 동등성·호출 관계는 판정하지 않습니다. 공백·주석만 바뀐 경우 AST 목록에 나타나지 않으므로 원문 Diff를 함께 확인하세요. 클래스 본문과 내부 함수 변경은 각각 표시되어 변경 건수는 줄 수와 다릅니다. 익명/화살표 함수 변수, TSX, 최신 문법 전체 지원은 보장하지 않습니다. 파싱 오류는 부분 AST 결과를 제공하지 않고 Text Diff로 안내합니다. 파일당 UTF8 1 MiB, 트리 100,000노드/깊이128, 요소5,000개 제한이며 main-thread 분석입니다.
+이름 변경은 같은 scope에서 매개변수·본문이 동일한 유일 조합의 **후보**입니다. 이동·의미 동등성·호출 관계는 판정하지 않습니다. 공백·주석만 바뀐 경우 AST 목록에 나타나지 않으므로 원문 Diff를 함께 확인하세요. 클래스 본문과 내부 함수 변경은 각각 표시되어 변경 건수는 줄 수와 다릅니다. 익명/화살표 함수 변수, TSX, 최신 문법 전체 지원은 보장하지 않습니다. 파싱 오류는 부분 AST 결과를 제공하지 않고 Text Diff로 안내합니다. 파일당 UTF8 1 MiB, 트리 100,000노드/깊이128, 요소5,000개 제한이며 로컬 Worker에서 분석합니다.
 
 CRLF/LF/CR 원문의 물리 줄 번호를 사용하며, CR 단독 줄바꿈은 원본을 보존한 분석용 복사본에서만 LF로 처리합니다. Import의 공백·주석만 바뀐 경우 변경으로 표시하지 않으며, Java package와 C#/TS namespace를 매칭 범위에 반영합니다. 원문 Diff는 계속 원본 문자열을 표시합니다.
 
@@ -177,6 +177,32 @@ $env:CODEDIFF_TEST_PORT = '5200'
 npm run test:e2e
 ```
 
-Monaco의 큰 chunk, Tree-sitter glue의 eval/Node 모듈 externalization, Tailwind fallback의 WASI 경고가 남습니다. 사용자 코드를 실행하거나 외부 서버로 전송하는 기능은 없습니다. 실제 GitHub Pages·다른 OS/브라우저·모바일 실기기는 미검증입니다. 다음은 Phase 8 — 성능 및 UI/UX입니다.
+Monaco의 큰 chunk, Tree-sitter glue의 eval/Node 모듈 externalization, Tailwind fallback의 WASI 경고가 남습니다. 사용자 코드를 실행하거나 외부 서버로 전송하는 기능은 없습니다. 실제 GitHub Pages·다른 OS/브라우저·모바일 실기기는 미검증입니다. Phase 8의 최신 기능·검증은 아래 내용을 참고하세요.
 
 ![Phase 7 Syntax Compare](docs/phase7-syntax-desktop.png)
+
+
+## 성능 및 UI/UX — Phase 8
+
+- Text/inline/Syntax, JSON 파싱·구조 비교·Formatter/JSONPath/Schema/TypeScript/CSV, Mapping 컴파일·적용·규칙 내보내기 검증, Patch 생성·재검증을 로컬 Worker로 처리합니다. Folder Compare의 경로·파일·바이트 정책은 독립적으로 유지하고 텍스트 CPU 비교만 Worker에 위임합니다.
+- 입력 변경·탭 이동·취소·unmount는 계산을 중단하고 오래된 결과를 버립니다. Worker 오류나 시간 초과를 동일 파일로 처리하지 않으며 메인 스레드 fallback은 없습니다. Code/Mapping의 재시도 및 Syntax/Patch/Folder 재실행, JSON 오류의 다시 분석을 사용할 수 있습니다. Worker wall 예산10초, Text 알고리즘 및 Monaco 시각 Diff1.5초, 폴더 전체15초를 둡니다. JSON 변환 중 저장·복사를 기다리게 하고 새 입력에 이전 변환을 덮어쓰지 않습니다.
+- 완료 Worker는 client별 재사용 후 idle30초 또는 탭 비활성화 때 해제합니다. 열린 탭의 편집 모델·입력·설정은 세션에서 보존하며 파일 데이터와 설정을 localStorage에 저장하지 않습니다. 화면 설정에서 현재 편집 모델·계산 Worker 개수를 확인할 수 있습니다.
+- 변경 목록은100개씩 표시하고 탐색 시 선택 페이지를 따라갑니다. snippet200자 및 상세 양쪽20,000자 제한은 미리보기에만 적용됩니다. 큰 단일 행과 어려운 비교는 Monaco 자체 렌더링·시간 한도에도 영향을 받습니다. 전체 현재 편집본은 코드 저장으로 확인하세요.
+- 화면 설정: Dark/Light·MiniMap, 분석 패널240–480px(화면 폭 제한), JSON/Mapping/Folder 원본 비율30–60%, 편집기 높이400–900px 및 크기 초기화. 네이티브 컨트롤로 키보드 조절이 가능하며 상단 본문 이동 링크를 제공합니다. 800px 이하에서는 MiniMap을 숨기고 데이터 패널을1열로 표시합니다. Code Compare는 수동 선택 전까지 Unified를 기본으로 사용합니다. 비교 규칙이나 업로드 파일은 설정으로 바뀌지 않습니다.
+
+검증: **311/311 단위·통합 테스트**, **production Edge E2E31/31**, TypeScript·ESLint·Production Build 통과. 개발 모드에서는 기존26개와 Phase8 기존4개가 통과했고, 새 입력 보존 테스트의 입력 방식을 보완한 뒤 Phase8 전체5/5를 재검증했습니다. 테마·패널·MiniMap·핵심 텍스트 대비·모바일 overflow·모델 수 유지·실제 Worker 종료·오래된 결과 차단·새 입력 보존·원문 다운로드를 포함합니다. 전체 접근성 적합성 인증이나 다른 OS/브라우저 검증은 아닙니다.
+
+성능 측정은 일반 회귀와 분리합니다. 먼저 빌드한 뒤 단일 Edge로 실행하세요.
+
+```powershell
+npm run build
+$env:CODEDIFF_TEST_PREVIEW = '1'
+$env:CODEDIFF_TEST_PORT = '5217'
+npm run test:perf
+```
+
+[실제 측정값과 범위](docs/PERFORMANCE.md), [측정 원본 JSON](docs/phase8-performance.json). 100~50,000줄, 500k/5MiB 단일 행, 반복·다중 변경, 취소, 20,000값 JSON, 500파일을 확인합니다. 시간은 업로드·debounce·메시지 전달·UI 반영을 포함하며 한 환경의 단일 표본입니다. 메모리는 CDP main-target JS heap으로 Worker/native/GPU를 포함하지 않습니다. Monaco 큰 chunk, Tree-sitter glue eval/Node externalization, Tailwind WASI 경고는 남습니다.
+
+![Phase 8 Light](docs/phase8-light-desktop.png)
+
+다음은 **Phase 9 — 통합 테스트 및 배포**입니다. CI/GitHub Pages 배포는 아직 수행하지 않았습니다.
