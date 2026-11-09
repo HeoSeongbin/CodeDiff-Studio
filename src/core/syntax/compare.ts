@@ -44,6 +44,22 @@ function fingerprint(node: Node | null, skipBody = false): string {
   }
   return tokens.join('');
 }
+function lineLookup(source: string) {
+  const starts = [0];
+  const eol = /\r\n|\r|\n/g;
+  let match: RegExpExecArray | null;
+  while ((match = eol.exec(source))) starts.push(match.index + match[0].length);
+  return (offset: number) => {
+    let low = 0,
+      high = starts.length;
+    while (low + 1 < high) {
+      const middle = (low + high) >>> 1;
+      if (starts[middle] <= offset) low = middle;
+      else high = middle;
+    }
+    return low + 1;
+  };
+}
 export function extractSymbols(
   source: string,
   language: Language,
@@ -60,12 +76,15 @@ export function extractSymbols(
     functions = new Set(definitions.functions),
     imports = new Set(definitions.imports);
   validateSource(source);
+  const physicalLine = lineLookup(source);
   const parser = new Parser();
   let tree: ReturnType<Parser['parse']> = null;
   try {
     parser.setLanguage(language);
     const started = performance.now();
-    tree = parser.parse(source, null, {
+    // Older grammars terminate line comments at LF only. Replace lone CR in a
+    // parse-only copy: UTF-16 offsets stay identical to the untouched raw text.
+    tree = parser.parse(source.replace(/\r(?!\n)/g, '\n'), null, {
       progressCallback: () => performance.now() - started > 1000,
     });
     if (!tree) throw new Error('구문 분석 시간 제한을 초과했습니다.');
@@ -83,7 +102,9 @@ export function extractSymbols(
         pending.push({ node: item.node.child(i)!, depth: item.depth + 1 });
     }
     const symbols: SymbolInfo[] = [];
-    const stack: { node: Node; scope: string }[] = [{ node: tree.rootNode, scope: '' }];
+    const packageNode = tree.rootNode.namedChildren.find((n) => n?.type === 'package_declaration');
+    const packageScope = packageNode ? `/package:${fingerprint(packageNode)}` : '';
+    const stack: { node: Node; scope: string }[] = [{ node: tree.rootNode, scope: packageScope }];
     let visited = 0;
     while (stack.length) {
       if (++visited > 100_000 || symbols.length > 5000)
@@ -98,18 +119,29 @@ export function extractSymbols(
             : undefined;
       const name =
         node.childForFieldName('name')?.text ?? (kind === 'import' ? fingerprint(node) : '');
+      if (kind && name && symbols.length >= 5000)
+        throw new Error('구문 요소 제한을 초과했습니다. Text Diff를 사용하세요.');
       if (kind && name)
         symbols.push({
           kind,
           name: kind === 'import' ? node.text : name,
           scope,
-          line: node.startPosition.row + 1,
-          endLine: node.endPosition.row + 1,
+          line: physicalLine(node.startIndex),
+          endLine: physicalLine(Math.max(node.startIndex, node.endIndex - 1)),
           signature: fingerprint(node, true),
           parameters: fingerprint(node.childForFieldName('parameters')),
           body: fingerprint(node.childForFieldName('body')),
         });
-      const childScope = kind && kind !== 'import' && name ? `${scope}/${kind}:${name}` : scope;
+      const namespace =
+        node.type === 'namespace_declaration' ||
+        node.type === 'file_scoped_namespace_declaration' ||
+        node.type === 'internal_module';
+      const childScope =
+        namespace && name
+          ? `${scope}/namespace:${name}`
+          : kind && kind !== 'import' && name
+            ? `${scope}/${kind}:${name}`
+            : scope;
       for (let i = node.namedChildCount - 1; i >= 0; i--)
         stack.push({ node: node.namedChild(i)!, scope: childScope });
     }
@@ -120,12 +152,14 @@ export function extractSymbols(
   }
 }
 export function matchSymbols(before: SymbolInfo[], after: SymbolInfo[]): SyntaxResult {
+  const identity = (symbol: SymbolInfo) =>
+    symbol.kind === 'import' ? symbol.signature : symbol.name;
   const remaining = new Set(after);
   const unmatched: SymbolInfo[] = [];
   const changes: SyntaxChange[] = [];
   for (const old of before) {
     const candidates = [...remaining].filter(
-      (n) => n.kind === old.kind && n.scope === old.scope && n.name === old.name,
+      (n) => n.kind === old.kind && n.scope === old.scope && identity(n) === identity(old),
     );
     const exact = candidates.filter((n) => n.parameters === old.parameters);
     // Ambiguous overloads are deliberately left unmatched.

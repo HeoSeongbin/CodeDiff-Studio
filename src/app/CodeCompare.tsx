@@ -73,12 +73,6 @@ export default function CodeCompare({
       const input = await loadFile(file, encoding);
       if (version !== uploadVersion.current[side]) return;
       state.setFile(side, input);
-      const codeEditor =
-        side === 'original'
-          ? diffEditor.current?.getOriginalEditor()
-          : diffEditor.current?.getModifiedEditor();
-      // setValue detects the uploaded EOL; wrapper executeEdits otherwise retains the previous model EOL.
-      codeEditor?.setValue(input.text);
       state.setLanguage(detectLanguage(file.name));
       setError('');
     } catch (e) {
@@ -136,9 +130,6 @@ export default function CodeCompare({
                 uploadVersion.current.original++;
                 uploadVersion.current.modified++;
                 state.sample();
-                const current = useWorkspace.getState();
-                diffEditor.current?.getOriginalEditor().setValue(current.original.text);
-                diffEditor.current?.getModifiedEditor().setValue(current.modified.text);
                 setError('');
                 setNotice('');
               }}

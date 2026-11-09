@@ -48,3 +48,13 @@ DiffLine은 원문, 원본/수정 줄 번호와 added/removed 연산을 보유�
 `core/folder/tree.ts`는 결과 subset에서 Map hierarchy를 만들고 collapse 상태를 flat virtual rows로 변환한다. 동일 path가 old file/new directory일 때 directory row와 file row를 동시에 남긴다. `stores/folderWorkspace.ts`는 선택 File refs와 옵션만 메모리에 보관한다. `FolderCompare.tsx`는 lazy workspace, progress/cancel·snapshot·virtual28rows·readonly selected Diff·export를 담당한다.
 
 `components/ManagedDiffEditor.tsx`는 parent layout cleanup에서 editor의 model을 분리하고 해제하여 React wrapper의 passive cleanup 순서 문제를 방지한다. CodeCompare와 Folder preview 양쪽에서 사용한다. 폴더 결과는 자동으로 전역 코드 입력을 덮어쓰지 않으며 명시적인 Code Compare 복사 버튼으로만 handoff한다. 그때 기존 편집 모델을 재생성해 원문 EOL을 감지한다.
+
+## Phase 7 — Syntax Compare
+
+core/syntax/adapters.ts의 언어별 AST 노드 정책, browser.ts의 로컬 runtime/grammar 로더, compare.ts의 detached AST 정보 추출·독립 매칭을 분리한다. 각 언어 Language promise만 캐시하며 parser/tree는 분석마다 생성·해제한다. 실패한 로드 캐시는 제거한다. UI는 Code Compare store의 원문 snapshot을 읽고 입력/언어가 바뀌면 이전 결과를 숨긴다. readonly Text Diff 선택 줄 이동만 수행하며 Text/JSON/Folder 엔진의 정책은 변경하지 않는다.
+
+CR-only 원문은 길이를 보존한 분석 복사본에서 파싱하고 원문 offset으로 물리 줄을 계산한다. 문자열 내용은 보존하며 AST의 공백·주석 leaf만 제외한다. scope/kind/name/parameters의 보수적 매칭과 유일 동일 본문 rename 후보를 사용하고 이동·의미 동등성을 판정하지 않는다. 클래스 본문과 내부 메서드 변경은 별도 요소다.
+
+ManagedDiffEditor는 Monaco 공개 API로 Diff editor와 두 model을 직접 소유한다. 외부 snapshot 교체는 이전 diff view-model 취소 후 다음 task에서 setValue하고 재연결하며, 직접 편집 echo는 값이 같으면 무시한다. clear pending timer → model detach → editor dispose → text models dispose 순서로 종료한다. 다른 JSON/Mapping 단일 Editor의 React wrapper는 유지한다. Playwright CODEDIFF_TEST_PREVIEW=1은 빌드된 dist를 테스트한다.
+
+StrictMode의 시험 mount는 취소 가능한 microtask로 editor 생성 전에 종료해 버려진 인스턴스의 Worker 요청을 만들지 않는다. 실제 mount 시점에는 최신 props로 두 모델과 옵션을 초기화한다.

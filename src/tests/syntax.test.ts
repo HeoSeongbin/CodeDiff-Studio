@@ -134,3 +134,68 @@ describe('syntax conservative matching and limits', () => {
     });
   });
 });
+
+describe('syntax source positions and declaration identity', () => {
+  it('maps CR-only physical lines with Unicode offsets', () => {
+    const source = '// 😀 한글\rclass A {\r int f() { return 1; }\r}';
+    expect(extractSymbols(source, grammars.get('java')!, 'java')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'A', line: 2, endLine: 4 }),
+        expect.objectContaining({ name: 'f', line: 3, endLine: 3 }),
+      ]),
+    );
+  });
+  it('normalizes import whitespace and comments without hiding string changes', () => {
+    expect(
+      compareSyntax(
+        'import a.B; class A {}',
+        'import a /*note*/ . B; class A {}',
+        grammars.get('java')!,
+        'java',
+      ).changes,
+    ).toEqual([]);
+    expect(
+      compareSyntax(
+        'import x from "a b";',
+        'import x from "ab";',
+        grammars.get('javascript')!,
+        'javascript',
+      ).changes.map((c) => c.type),
+    ).toEqual(['removed', 'added']);
+  });
+  it('separates namespaces with identically named classes and methods', () => {
+    const a =
+      'namespace A { class C { int F(){return 1;} } } namespace B { class C { int F(){return 2;} } }';
+    const b =
+      'namespace B { class C { int F(){return 2;} } } namespace A { class C { int F(){return 3;} } }';
+    const changes = compareSyntax(a, b, grammars.get('c_sharp')!, 'csharp').changes;
+    expect(changes).toHaveLength(2);
+    expect(changes.every((c) => c.before?.scope.startsWith('/namespace:A'))).toBe(true);
+  });
+  it('treats Java package changes as scope changes rather than moves', () => {
+    expect(
+      compareSyntax(
+        'package a; class C {}',
+        'package b; class C {}',
+        grammars.get('java')!,
+        'java',
+      ).changes.map((c) => c.type),
+    ).toEqual(['removed', 'added']);
+  });
+  it('enforces the exact symbol limit', () => {
+    expect(() =>
+      extractSymbols(
+        Array.from({ length: 5001 }, (_, i) => `import a.B${i};`).join('\n'),
+        grammars.get('java')!,
+        'java',
+      ),
+    ).toThrow('구문 요소 제한');
+    expect(
+      extractSymbols(
+        Array.from({ length: 5000 }, (_, i) => `import a.B${i};`).join('\n'),
+        grammars.get('java')!,
+        'java',
+      ),
+    ).toHaveLength(5000);
+  });
+});

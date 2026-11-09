@@ -1,5 +1,6 @@
 import { defineConfig } from '@playwright/test';
 const port = process.env.CODEDIFF_TEST_PORT || '5188';
+const production = process.env.CODEDIFF_TEST_PREVIEW === '1';
 export default defineConfig({
   testDir: './e2e',
   use: {
@@ -8,9 +9,11 @@ export default defineConfig({
     viewport: { width: 1440, height: 1000 },
   },
   webServer: {
-    command: `npm run dev -- --port ${port} --strictPort`,
+    command: production
+      ? `npm exec vite -- preview --host 127.0.0.1 --port ${port} --strictPort`
+      : `npm run dev -- --port ${port} --strictPort`,
     url: `http://127.0.0.1:${port}`,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: !production && !process.env.CI,
   },
   reporter: 'list',
 });

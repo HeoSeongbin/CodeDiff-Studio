@@ -4,7 +4,7 @@
 
 ## 현재 Phase
 
-Phase 7 — Syntax Compare 구현 및 단위 검증 진행. 브라우저·Production Build 검증은 환경 문제로 보류하여 Phase 7 완료 처리하지 않는다. 다음 세션은 Phase 7 검증부터 재개한다. 이전 Phase 기록은 당시 이력이며 최신 상태는 하단 Phase 7 기록을 기준으로 한다.
+Phase 7 — Syntax Compare 구현·검증 완료. 기존 보류 원인을 해결하고 Production Build 및 전체 Edge E2E를 통과했다. 다음은 Phase 8 — 성능 및 UI/UX이며 이번 세션은 Phase 7 마무리 범위에서 종료한다. 이전 기록은 당시 이력이며 최신 상태는 하단 Phase 7 최종 검증 기록을 기준으로 한다.
 
 ## 완료 작업
 
@@ -41,14 +41,14 @@ Phase 7 — Syntax Compare 구현 및 단위 검증 진행. 브라우저·Produc
 - Monaco 시각 diff와 jsdiff 분석 목록은 독립 엔진. 모든 공백/대소문자/EOL 옵션 결과가 Monaco 강조와 다를 수 있어 화면 및 README에 안내.
 - npm audit: dev-only minimatch 전이 의존성에 moderate 10건 남음. 호환 범위 audit fix로 해결되지 않음. 무리한 강제 downgrade/override는 하지 않았으며 후속 의존성 업데이트 필요. critical/high 0건.
 - Worker 기반 Text Diff 계산·취소·대용량 성능 검증은 Phase 8. 현재 main-thread 250ms debounce, 1.5초 계산 timeout. 5 MiB는 측정된 성능 보장이 아닌 임시 상한.
-- Light 테마, MiniMap, AST, 배포는 미구현. Folder Compare는 Phase 6에서 구현했다. Patch Export는 Phase 5에서 구현했다. Field Mapping은 Phase 4에서 구현했다. JSON Tools는 Phase 3에서 구현했다. Unified와 코드 다운로드는 Phase 2에서 구현했다.
+- Light 테마, MiniMap, 배포는 미구현. AST는 Phase 7에서 구현했다. Folder Compare는 Phase 6에서 구현했다. Patch Export는 Phase 5에서 구현했다. Field Mapping은 Phase 4에서 구현했다. JSON Tools는 Phase 3에서 구현했다. Unified와 코드 다운로드는 Phase 2에서 구현했다.
 - Git 저장소는 Phase 2 이후 초기화 및 origin/main 연결·푸시 완료 (최신 Phase 3·4 커밋 2382739). 배포는 미수행. 아래 Phase 1·2의 Git 미초기화 표기는 당시 이력이다.
 - E2E 실행 환경은 Edge 필요. 다른 OS는 playwright.config.ts의 channel 변경 또는 Chromium 설치 필요.
 - 배포 환경 및 모바일 실기기 미검증.
 
 ## 다음 작업
 
-다음 세션은 Phase 7에서 Tree-sitter runtime/WASM Grammar 호환성을 확인하고 Java/C#/Python 우선 AST 구조 추출·노드 매칭·변경 분류·Text Diff 연동과 정확성/지원 한계 테스트를 구현한다. 필수 문서·Git·기존 기능 검증 후 진행하며 파싱 성공을 의미론적 정확성으로 단정하지 않는다.
+다음 세션은 Phase 8에서 Worker 기반 비교·취소, 대용량 성능, Monaco 자원 관리, Dark/Light·레이아웃 조절·접근성을 진행한다. 필수 문서·Git·기존 기능 상태를 확인하고 실제 측정·검증한 항목만 완료 처리한다. Phase 7의 AST 파싱은 의미론적 정확성 판정이 아니다.
 
 ## Phase 2 · 2026-11-06 · 이번 세션
 
@@ -310,3 +310,36 @@ AGENTS/PROJECT/PROGRESS/DECISIONS/README, 실제 소스 및 jsdiff의 create/app
 - 익명·화살표 함수 변수/TSX/최신 grammar 문법 전체 미지원. 주석·공백 변경은 AST 목록 제외, 원문 diff에서 확인.
 - rename은 후보이며 이동·의미 동등성 판정 없음. 클래스와 내부 메서드 변경은 중복 집계될 수 있는 별도 요소.
 - 메인 스레드 추출·매칭의 hard latency 보장 없음. production/browser 검증 전 기능 완료를 선언하지 않음.
+
+## Phase 7 최종 검증 — 2026-11-09 · 완료
+
+### 이전 상태와 대조
+
+- 시작 시 main은 ba35486(Phase7 구현/검증 보류)까지 로컬 커밋되어 origin/main보다1개 앞섰고 작업 트리는 깨끗했다. 문서의 보류 상태와 실제 Tailwind4.3.4 로딩 정지를 재확인했다.
+- 공식 Tailwind4.3.5의 WASM 로딩 정지 수정(#20667)을 확인하여 vite plugin/Tailwind와 lock만 호환 patch 범위로 갱신했다. Windows 보안 정책을 변경하지 않고 공식 fallback으로 Vite·Build 동작을 복원했다.
+
+### 보완 구현
+
+- Import 매칭은 raw 표시 문자열 대신 token fingerprint로 공백·주석만의 변경을 제외한다. Java package 및 C#/TS namespace scope를 구분한다.
+- CR-only 입력의 구형 grammar line-comment 오해석을 같은 UTF16 길이의 분석 복사본에서 해결하고, 원문 offset 기준 CRLF/LF/CR 물리 줄 탐색을 적용했다. 원본 store·파일·다운로드는 그대로 보존한다.
+- 5,000개 요소 상한을 정확히 적용하고 CR-only/Unicode, import 공백, namespace 동명이인, package, 정확한 상한 테스트5개 추가.
+- Production 전용 Playwright preview 모드 추가. 실제 배포 산출물을 검증하면서 기존 dev 모드와 분리한다.
+- Production 회귀에서 기존 Monaco의 문서 축소 시 이전 diff/gutter 줄 범위 경합을 발견해 수정. ManagedDiffEditor가 공개 API로 생성·원문 갱신·해제를 직접 소유하고 이전 diff view-model 취소 다음 task에서 snapshot을 적용한다. CodeCompare upload/sample의 중복 setValue는 제거했다. 직접 편집 echo는 건드리지 않는다.
+- 개발 StrictMode의 시험 mount는 취소 가능한 microtask로 실제 editor 생성 전에 무효화하여 Worker Canceled 경합을 해결했다. 구문 로드 실패 주입 테스트는 Vite ?url 모듈을 차단하지 않고 실제 fetch만 차단하도록 수정했다.
+
+### 최종 검증
+
+- npm test: **291/291 통과** (기존271 + 실제5개 WASM Syntax20).
+- npm run typecheck / npm run lint: 통과.
+- npm run build: 통과. 5개 grammar 및 runtime WASM 로컬 산출물 확인.
+- Production Edge 전체 E2E: **26/26 통과**. 실제5개 WASM HTTP200/304, 오류/미지원 fallback, 입력 변경 시 결과 무효화, readonly preview에서 입력해도 raw CRLF 다운로드 불변, grammar fetch 실패 후 재시도, syntax pageerror0, 외부 요청0(Java 시나리오), 기존 Text/JSON/Mapping/Patch/Folder18개 회귀.
+- 개발 Edge: 기존18개와 Syntax7개 통과 후 장애 주입 fixture의 ?url 모듈 차단 문제를 수정했고, Syntax8/8 전체 재검증 통과. production/dev의 StrictMode 차이를 포함해 검증했다.
+- docs/phase7-syntax-desktop.png 생성·시각 검토. 회귀 테스트가 재생성한 이전 Phase 이미지는 작업 범위에 포함하지 않는다.
+- ADR018, README, ARCHITECTURE, TEST-CASES 갱신. Phase7을 완료로 변경한다. 이번 변경은 아직 커밋·푸시하지 않았다.
+
+### 남은 한계와 다음 Phase
+
+- 빌드의 기존 Monaco 대형 chunk 및 Tree-sitter glue eval/Node externalization, 공식 fallback WASI 실험 경고가 남는다. 사용자 원문을 eval하거나 서버로 전송하는 기능은 없다. 설치 audit의 기존 dev moderate10건 유지, 이번에 추가 audit 조회는 하지 않았다.
+- main-thread Syntax 처리·정적 보호 예산이며 hard latency/Worker 취소·성능 보장은 Phase8에서 다룬다. 익명/화살표 함수 변수, TSX, 최신 문법/의미론 전체 지원 아님. 선언 노드 밖 decorator 등은 AST 결과에 포함되지 않을 수 있으므로 원문 Diff를 함께 확인한다.
+- 실제 GitHub Pages, 다른 OS/브라우저, 모바일 실기기는 미검증. 환경별 Monaco 수명 검증은 버전 변경 시 다시 수행한다.
+- **다음: Phase8 — 성능 및 UI/UX**. 필수 문서·Git 상태 확인 후 Worker 기반 비교/취소·성능 측정, 자원 관리, Dark/Light, 조절 가능한 레이아웃·접근성을 구현한다. 이번에는 Phase8 기능을 추가하지 않는다.

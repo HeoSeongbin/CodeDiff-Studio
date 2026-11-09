@@ -91,3 +91,10 @@ Phase 4 당시 결과: 단위 **161/161**, Edge E2E **12/12**, typecheck/lint/bu
 - 실제 web-tree-sitter + 5개 WASM Node 통합 테스트15개: 매개변수·본문·클래스·import·유일 rename 후보, 모호한 duplicate 서명, 오버로드 순서, 문자열 공백/주석, 한글/CRLF 줄 위치, 잘못된 구문/1MiB/깊이 제한. 전체286 통과.
 - e2e/phase7.spec.ts 신규6개: 로컬 grammar 5종, readonly Text Diff 연결, stale/parse error, unsupported/mobile. **미검증**: 기존 Tailwind 모듈 Windows Application Control 차단 및 fallback 정지로 dev server 시작 실패. 환경 복원 후 기존18개와 합계24개 실행 필요.
 - TypeScript/ESLint 통과, Production Build 정지로 최종 완료 보류.
+
+## Phase 7 최종 검증 · 2026-11-09
+
+- Syntax Node 테스트20개, 전체291/291. 추가 경계: CR-only+astral Unicode 줄 offset, import 공백/주석과 문자열 구분, namespace 동명이인·순서 교환, Java package scope 변경, 요소5k 정확한 경계.
+- Production preview 전체 Edge26/26 통과. CODEDIFF_TEST_PREVIEW=1로 실제 dist를 사용하고 npm run build를 먼저 실행한다. Syntax8개는 pageerror0을 검증하며 실제5개 grammar HTTP 성공, parse error/stale/unsupported/mobile, readonly 상태 입력 후 원문 CRLF 다운로드 일치, fetch 오류 재시도를 포함한다. 기존18개 회귀 포함.
+- 개발 모드 기존18개와 Syntax7개 통과 후, fetch 오류 주입이 Vite ?url 모듈을 차단하던 테스트를 고쳐 Syntax8/8 재검증 통과. StrictMode discarded instance의 Canceled Worker 오류와 production 줄 범위 경합도 수정 후 검증했다.
+- TypeScript·ESLint·Build 통과. 이전 보류 기록은 당시 이력이며 최종 상태는 이 절과 PROGRESS 최종 기록을 기준으로 한다.

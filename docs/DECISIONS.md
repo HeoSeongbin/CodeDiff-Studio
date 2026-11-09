@@ -174,3 +174,15 @@
 - 예산: 입력1 MiB, 트리100k노드·깊이128, 요소5k, parser progress callback 약1초 취소. 구형 timeout setter는 실제 런타임에서 BigInt 오류가 발생해 권장 progress callback 사용. 동기 추출/매칭의 hard deadline 보장은 없으며 Worker는 Phase8 범위다.
 - 한계: 익명/화살표 함수 변수·TSX·최신 grammar 문법 전체 미지원. 파싱 오류 시 부분 AST 미표시. 원문 readonly Text Diff와 연결하며 입력 snapshot이 달라지면 결과를 숨긴다.
 - 검증 제한: Node 실제 WASM 테스트 통과. 기존 Tailwind 네이티브 파일의 Windows Application Control 차단 및 WASM fallback 정지로 Vite/E2E/Production Build 확인 보류. 이를 해결하기 위해 보안 정책이나 기존 스타일 구성을 변경하지 않는다.
+
+## ADR-018 · 2026-11-09 · Phase 7 검증 복원과 원문 모델 갱신
+
+- 문제: Tailwind 4.3.4 native 파일은 로컬 Application Control에 차단되고 설치된 WASM fallback은 로딩에서 정지했다. [공식 4.3.5 릴리스](https://github.com/tailwindlabs/tailwindcss/releases/tag/v4.3.5)의 WASM 로딩 정지 수정(#20667)을 확인해 Tailwind/Vite plugin을 4.3.5로 갱신했다. 보안 정책 변경이나 스타일 파이프라인 제거는 하지 않았다. native 차단 환경에서도 공식 WASM fallback으로 빌드가 통과한다.
+- Production 검증: Playwright의 CODEDIFF_TEST_PREVIEW=1 옵션으로 같은 테스트를 vite preview의 실제 dist에 실행한다. 이 모드에서는 기존 서버 재사용을 금지해 개발 서버를 production으로 오인하지 않는다. 사전 npm run build가 필요하다.
+- 발견 오류: production의 빠른 업로드/짧은 문서 교체에서 Monaco 0.52.2의 이전 diff range/gutter가 새 줄 수를 참조해 Illegal value for lineNumber 및 범위 역전 오류를 발생시켰다. React DiffEditor의 자동 setValue와 CodeCompare의 직접 setValue가 중복되는 경로도 있었다.
+- 선택: ManagedDiffEditor에서 공개 Monaco API로 생성·업데이트·정리를 직접 소유한다. 직접 편집의 store echo는 model 값이 같으면 건드리지 않는다. 외부 snapshot 변경은 setModel(null) 후 Monaco의 기존 diff view-model 해제(setTimeout 0) 다음 task에서 살아 있는 동일 텍스트 모델에 setValue하고 다시 연결한다. pending 교체는 마지막 snapshot으로 합치고 unmount 시 timer를 정리한다. CodeCompare의 upload/sample 직접 setValue는 제거한다. 원문 EOL 감지와 원본 store 불변성을 유지한다.
+- 대안·트레이드오프: 같은 task에서 detach/setValue/reattach하면 이전 view-model의 비동기 해제가 끝나지 않아 경합이 남았다. 매번 새 텍스트 모델을 만들고 바로 이전 모델을 해제하면 worker가 참조할 모델이 사라지는 no diff result available 경합이 생겼다. 최종 방식은 모델 수명을 유지하되 외부 교체가 한 task 지연된다. Monaco 내부 해제 순서는 현재 0.52.2 소스와 실제 production 회귀로 확인했으며 향후 버전 변경 시 재검증한다. Worker 성능 개선은 Phase8 범위다.
+- 정확성 보완: CR 단독 EOL은 동일 UTF16 길이의 분석용 LF 복사본으로 파싱해 구형 grammar의 line-comment 오해석을 방지하고, 원문 offset→물리 줄 이진 탐색을 사용한다. Import 매칭 key는 표시 원문 대신 token fingerprint, Java package/C#/TS namespace는 별도 scope로 반영한다. 요소5k 상한을 정확히 적용한다.
+- 검증: 실제 WASM Node 테스트291개, production 전체 Edge E2E26개, TypeScript/ESLint/Build 통과. 5개 grammar HTTP200/304, readonly CRLF 원문 다운로드 일치, 실패 재시도, pageerror0, 기존 Text/JSON/Folder/Mapping/Patch 기능 회귀 확인. 큰 chunk/Tree-sitter glue eval·Node externalization/WASI 경고는 남는다.
+
+StrictMode 보완: 개발 모드의 시험 mount에서 즉시 Worker를 생성하고 해제하면 Canceled/no diff result available 오류가 발생했다. editor 생성은 취소 가능한 microtask로 미뤄 시험 mount에서는 Worker 요청 자체를 시작하지 않는다. 최종 개발/production 회귀 결과는 PROGRESS 최종 기록을 기준으로 한다.
