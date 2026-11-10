@@ -65,3 +65,5 @@ Remove-Item Env:CODEDIFF_DEPLOYMENT_URL
 - Syntax rename은 후보이며 이동/의미 동등성·모든 최신 문법·TSX를 지원한다고 주장하지 않는다.
 - Firefox, Safari, 모바일 실기기 및 전체 WCAG 적합성 인증은 미검증이다. Windows Edge 검증과 과거 Ubuntu CI Chromium smoke 결과를 구분한다.
 - 신규 reusable CI의 원격 실행, PR 이벤트 및 배포 gate는 커밋·푸시 후 Actions 결과 확인이 필요하다. 로컬 테스트로 원격 성공을 대신 표시하지 않는다.
+
+2026-11-10 사용자 요청 UI 정리 후 로컬 production 전체 회귀는34/34(기존31 + 공통 레이아웃3)이다.351개 단위 테스트와 정적 검사/build도 통과했다. 위 실제 Pages8개 결과는 이전 배포 버전에 대한 검증이며 새 공통 UI는 아직 미배포다. 최신 화면·범위는 README와 PROGRESS의 UI 기록을 따른다.

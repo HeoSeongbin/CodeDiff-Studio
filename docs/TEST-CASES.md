@@ -8,7 +8,7 @@ npm run build
 npm run test:e2e
 ```
 
-최신 검증(2026-11-10): 단위·통합 **351/351**, production Edge **31/31**, 실제 Pages Edge **8/8**, typecheck/lint/build 통과. 아래 Phase별 기록은 당시 이력이며 최신 범위·제한은 하단 Phase9와 RELEASE-CHECKLIST.md를 따른다. Monaco 번들 크기 경고 유지.
+최신 검증(2026-11-10): 단위·통합 **351/351**, production Edge **34/34**, 실제 Pages Edge **8/8**, typecheck/lint/build 통과. 아래 Phase별 기록은 당시 이력이며 최신 범위·제한은 하단 Phase9와 RELEASE-CHECKLIST.md를 따른다. Monaco 번들 크기 경고 유지.
 
 ## 단위 테스트
 
@@ -116,3 +116,10 @@ Phase 4 당시 결과: 단위 **161/161**, Edge E2E **12/12**, typecheck/lint/bu
 - docs/phase9-deployed-{desktop,mobile}.png는 실제 배포 주소에서 비교 완료 후 생성하고 시각 검토했다. 과거 Phase 화면의 회귀 자동 생성본은 시작 커밋의 이력 이미지로 복원했다.
 - ci.yml은 PR/수동/reusable regression, pages.yml은 regression 성공 후 base_path 재빌드·배포 smoke를 통과해야 게시하도록 구성한다. 신규 workflow 원격 실행은 아직 검증하지 않았다. 기존 2026-11-09 CI 성공과 구분한다.
 - 검증 방법·요구사항별 근거는 RELEASE-CHECKLIST.md. 이 날짜 이후 문서 상단에 이력을 대표하는 오래된 총계를 사용하지 않는다.
+
+## 사용자 요청 UI 정리 · 2026-11-10
+
+- npm test351/351, typecheck/lint/build 통과. production Edge 전체34/34(기존31 + app-shell3).
+- app-shell.spec.ts:6개 작업 공간에서 header/rail DOM 유지·선택 상태·원문 CRLF 저장, 기본 숨김과 header 위 메뉴 펼침·키보드/Escape·닫기 버튼·Light 보존,390/768px 공통 rail 유지·수평 overflow 없음·팝업 범위·sticky 확인. pageerror/외부 요청0.
+- 설정 팝업이 닫기 버튼을 가리는 최초 실패를 헤더 아래 배치로 해결 후 재검증했다. phase8/performance 설정 진입 fixture는 메뉴 열기 단계를 포함한다. 성능 측정은 재실행하지 않았다.
+- ui-shell-code/menu/mobile.png는 새 로컬 production UI. phase9-deployed 이미지는 당시 실제 배포 이력이다. 현재 UI는 아직 실제 Pages에 게시하지 않았다.

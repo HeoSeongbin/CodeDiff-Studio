@@ -225,3 +225,13 @@ StrictMode 보완: 개발 모드의 시험 mount에서 즉시 Worker를 생성�
 - 개인정보: 테스트는 합성 fixture만 사용하며 HTTP GET/HEAD 외 요청, origin 외부 요청,404/pageerror를 실패로 본다. 폴더 fixture는 검증된 tmpdir 하위 고유 디렉터리만 정리한다. 원본 파일 쓰기나 서비스 업로드 구현을 추가하지 않는다.
 - 영향: .github/workflows/{ci,pages}.yml, playwright.config.ts, e2e/deployment.spec.ts, src/tests/release.test.ts. 비교 엔진·JSON/Folder의 책임·파일 정책은 유지한다. 신규 외부 의존성 없음.
 - 한계: seed 검사는 모든 문자열에 대한 증명이 아니다. Edge/Chromium과 viewport emulation은 Firefox/Safari/모바일 실기기·WCAG 인증을 대체하지 않는다. 새 workflow의 원격 실행 결과는 로컬 결과와 구분하여 PROGRESS에 기록한다.
+
+## ADR-023 · 2026-11-10 · 공통 헤더·왼쪽 메뉴와 접이식 상단 메뉴
+
+- 요청/문제: Code Compare 내부에만 있던 헤더와 왼쪽 메뉴가 다른 작업 공간에서 사라졌다. 상단 탭·화면 설정은 기본으로 숨기고 필요할 때 버튼으로 열도록 사용자가 요청했다.
+- 선택: AppShell이 헤더·6개 작업 공간 아이콘 rail·상단 메뉴 disclosure를 소유하고 App은 typed WorkspaceId와 열린 작업 공간 상태를 유지한다. CodeCompare에서 중복 chrome만 제거하며 각 도구의 lazy 최초 mount/hidden 보존·Worker 활성 컨텍스트·Folder handoff를 유지한다.
+- 대안: 각 도구에 헤더·rail 복사 또는 탭마다 재mount. 복사는 상태/스타일 중복, 재mount는 입력·모델 수명 손실 가능성이 있어 공통 부모를 선택했다. 비교 엔진이나 도구 책임은 변경하지 않았다.
+- 동작: 기본 hidden인 상단 메뉴는 헤더 버튼의 aria-expanded/controls로 토글한다. 메뉴 안에서 Escape 시 닫고 버튼으로 포커스를 반환한다. 아이콘 메뉴는 닫힌 상태에서도6개 도구를 연다. 메뉴/테마/크기는 세션 전용이며 파일 저장이나 네트워크 기능을 추가하지 않는다.
+- 레이아웃: sticky 헤더와 rail. ResizeObserver로 실제 topbar 높이를 측정해 메뉴 줄바꿈·모바일에서도 rail이 헤더 뒤로 숨지 않게 한다. observer는 unmount 때 해제한다. 화면 설정 팝업은 헤더 아래로 열어 메뉴 닫기 버튼을 가리지 않는다.
+- 영향: components/AppShell.tsx, app/App.tsx, app/CodeCompare.tsx, style.css. phase8/performance 테스트는 화면 설정 전 메뉴를 열도록 사용 흐름만 조정한다. 신규 의존성 없음.
+- 검증: UI E2E로 header/rail DOM 동일성,6개 공간 이동·선택 표시·CRLF 원문 저장, 기본 숨김/키보드 열기/Escape/버튼 닫기, Light 설정 보존,390/768px overflow·팝업 범위·scroll sticky를 확인한다. 최초 팝업이 닫기 버튼을 가린 실패는 위치 수정 후 재검증한다. 전체 결과는 PROGRESS 최신 기록 참조.

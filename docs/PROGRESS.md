@@ -4,7 +4,7 @@
 
 ## 현재 Phase
 
-Phase 9 — 통합 테스트 및 배포. 릴리스 테스트·로컬 production 전체 회귀·실제 Pages 기능 검증·문서 정리 완료. 새 reusable CI와 배포 gate의 원격 실행은 커밋·푸시 후 검증 대기이므로 Phase9 전체 완료로 처리하지 않는다. 최신 상태는 하단2026-11-10 기록을 기준으로 하며 이전 기록은 당시 이력이다.
+Phase 9 — 통합 테스트 및 배포. 릴리스 테스트·로컬 production 전체 회귀·실제 Pages 기능 검증·문서 정리 완료. 새 reusable CI와 배포 gate의 원격 실행은 커밋·푸시 후 검증 대기이므로 Phase9 전체 완료로 처리하지 않는다. 사용자 요청 UI 정리(공통 헤더/왼쪽 메뉴·접이식 상단 메뉴)를 추가 구현·로컬 검증했다. 최신 상태는 하단2026-11-10 UI 기록을 기준으로 하며 이전 기록은 당시 이력이다.
 
 ## 완료 작업
 
@@ -437,3 +437,30 @@ AGENTS/PROJECT/PROGRESS/DECISIONS/README, 실제 소스 및 jsdiff의 create/app
 
 - 현재 변경은 Phase9 통합 검증 커밋에 포함하며 미푸시 상태로 남긴다. 푸시 후 Deploy GitHub Pages의 regression → build → deploy 성공을 확인하고 실제 주소8개 검사를 다시 실행한다. PR trigger 자체는 실제 PR에서 별도로 확인해야 한다.
 - 위 원격 gate 확인 전 Phase9 전체 완료로 표시하지 않는다. PROJECT에 정의된 다음 Phase는 없으며, Phase9를 검증해 종료한 후 추가 개선은 별도 범위를 정한다. 임의의 Phase10을 만들지 않는다.
+
+## 2026-11-10 · 사용자 요청 UI 정리 · 공통 헤더/왼쪽 메뉴
+
+### 범위 / 시작 상태
+
+- 사용자 이미지의 빨간 상단 헤더·왼쪽 메뉴를 탭 전환 시 유지하고, 파란 상단 탭/화면 설정을 버튼으로 펼치도록 요청받았다. Phase9 후속의 명시적으로 승인된 UI 작업이며 새 Phase를 만들지 않는다.
+- AGENTS/PROJECT/PROGRESS/DECISIONS 및 소스·Git 확인. main은 로컬8517b80(원격보다1개 앞섬), 작업 트리는 깨끗했다. 이전 커밋·미푸시 상태는 유지한다.
+
+### 구현
+
+- src/components/AppShell.tsx 추가: 공통 로고 헤더·6개 작업 공간 rail·메뉴 버튼. 기본 hidden 메뉴를 헤더 위에 펼치며 화면 설정을 포함한다. 메뉴 내 Escape로 닫고 버튼에 포커스를 반환한다. 선택 도구 강조와 아이콘의 이름/title을 제공한다.
+- src/app/App.tsx: typed WorkspaceId와 열린 패널 상태로 lazy 최초 mount·기존 hidden panel·Worker 활성 컨텍스트·Folder handoff 유지. CodeCompare에서 자체 header/rail만 제거했다. 입력·편집 모델·비교 엔진은 그대로 유지한다.
+- src/style.css: 헤더/rail sticky, 모바일에서도 왼쪽 rail 유지. ResizeObserver로 줄바꿈된 실제 topbar 높이를 반영하고 해제한다. 화면 설정 팝업을 헤더 아래로 배치해 메뉴 닫기 버튼을 가리지 않는다. Light/Dark 기존 팔레트 재사용. 오래된 v0.8/Phase8 표시를 공통 헤더에 복제하지 않았다.
+- e2e/app-shell.spec.ts3개 추가. phase8/performance fixture는 화면 설정 전에 메뉴 버튼을 여는 사용자 흐름으로 조정했다. 성능 benchmark는 재측정하지 않았다.
+- README 화면 구성/사용법·현재 UI 화면, ARCHITECTURE·ADR-023·TEST-CASES 기록. docs/ui-shell-{code,menu,mobile}.png는 로컬 production 화면이며 실제 배포 이미지와 구분한다.
+
+### 검증 / 발견한 문제
+
+- npm test351/351, typecheck/lint/production build 통과. 새 UI3개 포함 production Edge 전체34/34 통과. header/rail DOM 동일성,6개 공간 선택·CRLF 원문 저장, 기본 숨김·Enter/클릭 열기·Escape/버튼 닫기·Light 보존,390/768px overflow 없음·팝업 범위·scroll sticky 확인. 기존31개 Text/JSON/Mapping/Patch/Folder/Syntax/Worker/UI 회귀도 통과했다.
+- 최초 UI 검사에서 화면 설정 팝업이 메뉴 닫기 버튼을 가려 timeout이 났다. 팝업이 헤더 아래로 열리도록 수정한 뒤 전체34개가 통과했다. 실패를 정상 기능으로 완료 처리하지 않았다.
+- 데스크톱 접힘/상단 메뉴 및 설정 펼침/모바일 화면 생성·시각 검토. 테스트 화면은 계산 완료를 기다린다. 과거 Phase의 자동 재생성 이미지는 시작 커밋의 이력 버전으로 복원한다.
+- 외부 요청/pageerror 없음. 비교 알고리즘·원본 파일 변경·네트워크 업로드·새 의존성 없음. 기존 Monaco chunk·Tree-sitter glue eval/Node externalization 경고는 유지한다.
+
+### 현재 상태 / 다음 작업
+
+- 이번 UI 변경은 공통 레이아웃 커밋에 포함하며 미푸시·미배포 상태로 남긴다. 기존8517b80 커밋도 아직 미푸시다. 실제 Pages는 이전 배포 UI다. 이번 로컬34개 결과를 실제 배포 검증으로 표현하지 않는다.
+- 다음은 사용자가 확인한 UI를 커밋·푸시한 뒤 새 CI regression/build/deploy 및 실제 Pages를 재검증하는 작업이다. Phase9 원격 CI 검증 대기 상태와 실기기/다른 브라우저 미검증은 유지한다.

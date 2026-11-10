@@ -5,10 +5,8 @@ import type { editor } from 'monaco-editor';
 import {
   ArrowDown,
   ArrowUp,
-  Braces,
   ChevronRight,
   FileCode2,
-  Files,
   GitCompareArrows,
   ShieldCheck,
   Upload,
@@ -21,13 +19,7 @@ import { downloadText } from '../core/export';
 import { ChangeDetail } from '../components/ChangeDetail';
 import { detectLanguage, languages, lineCount, loadFile, MAX_BYTES } from '../core/file';
 
-export default function CodeCompare({
-  onJson,
-  onFolder,
-}: {
-  onJson: () => void;
-  onFolder: () => void;
-}) {
+export default function CodeCompare() {
   const state = useWorkspace();
   const [error, setError] = useState('');
 
@@ -95,34 +87,7 @@ export default function CodeCompare({
   }
   return (
     <div className="studio">
-      <header>
-        <div className="brand">
-          <span className="logo">
-            <GitCompareArrows size={22} />
-          </span>
-          <div>
-            CodeDiff <strong>Studio</strong>
-            <small>CODE COMPARISON WORKSPACE</small>
-          </div>
-        </div>
-        <span className="version">v0.8 / Phase 8</span>
-        <div className="privacy">
-          <ShieldCheck size={15} /> 브라우저 로컬 처리
-        </div>
-      </header>
       <div className="shell">
-        <aside className="rail">
-          <div className="rail-active" title="Code Compare">
-            <GitCompareArrows />
-          </div>
-          <button aria-label="Folder Compare 열기" title="Folder Compare" onClick={onFolder}>
-            <Files />
-          </button>
-          <button aria-label="JSON Tools 열기" title="JSON Tools" onClick={onJson}>
-            <Braces />
-          </button>
-          <div className="rail-bottom">CD</div>
-        </aside>
         <main>
           <div className="workspace-heading">
             <div>

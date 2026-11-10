@@ -9,6 +9,11 @@ test.beforeEach(async ({ page }) => {
 test.afterEach(async ({ page }) => {
   expect(errors.get(page)).toEqual([]);
 });
+async function toggleSettings(page: Page) {
+  const menu = page.getByRole('button', { name: '워크스페이스 메뉴', exact: true });
+  if ((await menu.getAttribute('aria-expanded')) === 'false') await menu.click();
+  await page.locator('.display-settings summary').click();
+}
 async function upload(page: Page, original: string, modified: string) {
   for (const [index, side] of ['Original', 'Modified'].entries())
     await page.getByLabel(`${side} 파일 업로드`).setInputFiles({
@@ -59,7 +64,7 @@ test('keyboard settings, all-workspace light theme, model bounds and mobile layo
   await link.focus();
   await page.keyboard.press('Enter');
   await expect(page.locator('#active-workspace')).toBeFocused();
-  await page.locator('.display-settings summary').click();
+  await toggleSettings(page);
   await page.getByLabel('테마', { exact: true }).selectOption('light');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await checkTextContrast(page);
@@ -80,7 +85,7 @@ test('keyboard settings, all-workspace light theme, model bounds and mobile layo
   await expect(page.locator('.editor-area .editor.modified .minimap')).toBeVisible();
   await page.getByRole('button', { name: '패널 크기 초기화' }).click();
   await expect(page.locator('.changes')).toHaveCSS('width', '280px');
-  await page.locator('.display-settings summary').click();
+  await toggleSettings(page);
   await page.screenshot({ path: 'docs/phase8-light-desktop.png', fullPage: true });
   for (const workspace of [
     'JSON Tools',
@@ -94,7 +99,7 @@ test('keyboard settings, all-workspace light theme, model bounds and mobile layo
     await expect(page.locator('#active-workspace')).toBeVisible();
     await expect(page.locator('#active-workspace h1')).toBeVisible();
     if (workspace === 'JSON Tools') {
-      await page.locator('.display-settings summary').click();
+      await toggleSettings(page);
       await page.getByLabel('데이터 원본 패널 비율').focus();
       await page.keyboard.press('End');
       const ratio = await page
@@ -110,10 +115,10 @@ test('keyboard settings, all-workspace light theme, model bounds and mobile layo
       await page.keyboard.press('Home');
       await expect(page.locator('.json-editor').first()).toHaveCSS('height', '400px');
       await page.getByRole('button', { name: '패널 크기 초기화' }).click();
-      await page.locator('.display-settings summary').click();
+      await toggleSettings(page);
     }
   }
-  await page.locator('.display-settings summary').click();
+  await toggleSettings(page);
   const resource = page.getByLabel('로컬 처리 현황');
   const count = () =>
     resource.innerText().then((text) => Number(text.match(/편집 모델 (\d+)/)![1]));
@@ -124,17 +129,17 @@ test('keyboard settings, all-workspace light theme, model bounds and mobile layo
       await page.getByRole('button', { name: workspace, exact: true }).click();
   expect(await count()).toBe(baseline);
   await page.getByLabel('테마', { exact: true }).selectOption('dark');
-  await page.locator('.display-settings summary').click();
+  await toggleSettings(page);
   await page.getByRole('button', { name: 'Code Compare', exact: true }).click();
   await checkTextContrast(page);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator('.display-settings summary').click();
+  await toggleSettings(page);
   const settingsBounds = await page.locator('.display-controls').boundingBox();
   expect(settingsBounds!.x).toBeGreaterThanOrEqual(0);
   expect(settingsBounds!.x + settingsBounds!.width).toBeLessThanOrEqual(390);
   await page.getByLabel('테마', { exact: true }).selectOption('light');
   await page.getByLabel('테마', { exact: true }).selectOption('dark');
-  await page.locator('.display-settings summary').click();
+  await toggleSettings(page);
   for (const workspace of [
     'Code Compare',
     'JSON Tools',
@@ -186,7 +191,7 @@ test('running work is terminated on cancel and never overwrites a newer snapshot
     );
   }
   await page.getByRole('button', { name: 'Patch Export', exact: true }).click();
-  await page.locator('.display-settings summary').click();
+  await toggleSettings(page);
   await expect(page.getByLabel('로컬 처리 현황')).toContainText('계산 Worker 0개');
 });
 test('worker loading errors are visible and retry restores comparison', async ({ page }) => {

@@ -203,6 +203,7 @@ test('Phase 8 production performance and responsiveness matrix', async ({
   } finally {
     await rm(work, { recursive: true, force: true });
   }
+  await page.getByRole('button', { name: '워크스페이스 메뉴', exact: true }).click();
   await page.locator('.display-settings summary').click();
   const modelCount = Number(
     (await page.getByLabel('로컬 처리 현황').innerText()).match(/편집 모델 (\d+)/)![1],

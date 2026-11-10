@@ -45,7 +45,7 @@ button:disabled {
   opacity: 0.35;
   cursor: default;
 }
-header {
+.app-header {
   height: 78px;
   display: flex;
   align-items: center;
@@ -577,7 +577,7 @@ footer {
   .version {
     margin-left: auto;
   }
-  header {
+  .app-header {
     padding: 0 16px;
   }
   .note > span {
@@ -2196,5 +2196,136 @@ a:focus-visible {
     width: auto;
     max-height: 70vh;
     overflow: auto;
+  }
+}
+
+/* Shared application chrome stays mounted across workspaces. */
+.app-frame {
+  --app-header-height: 78px;
+}
+.app-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.app-header {
+  height: 78px;
+}
+.workspace-menu-toggle {
+  margin-left: 0;
+  flex-shrink: 0;
+}
+.app-header .brand {
+  min-width: 0;
+}
+.app-header .privacy {
+  margin-left: auto;
+}
+.app-body {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  align-items: start;
+  min-height: calc(100dvh - 78px);
+}
+.app-rail {
+  position: sticky;
+  top: var(--app-topbar-height, 78px);
+  display: flex;
+  width: 58px;
+  height: calc(100dvh - var(--app-topbar-height, 78px));
+  min-height: 0;
+  overflow-y: auto;
+  gap: 12px;
+  padding: 14px 7px 0;
+  background: var(--c-101318);
+}
+.app-rail > button {
+  width: 42px;
+  height: 42px;
+  padding: 9px;
+  flex-shrink: 0;
+}
+.app-rail > button[aria-pressed='true'] {
+  color: var(--c-a8a2ff);
+  background: var(--c-26243c);
+  border-color: var(--c-8d84ed);
+}
+.app-rail .rail-bottom {
+  margin-bottom: 14px;
+}
+.workspace-content,
+.workspace-content > div {
+  min-width: 0;
+  width: 100%;
+}
+.workspace-content .shell {
+  min-height: calc(100dvh - 106px);
+}
+.app-topbar .workspace-nav {
+  flex-wrap: wrap;
+  position: relative;
+  gap: 8px;
+}
+.app-topbar .display-controls {
+  z-index: 60;
+  top: calc(100% + var(--app-header-height));
+  right: 12px;
+}
+.app-topbar .display-settings {
+  position: static;
+}
+@media (max-width: 800px) {
+  .app-frame {
+    --app-header-height: 72px;
+  }
+  .app-header {
+    height: 72px;
+    gap: 10px;
+    padding: 0 12px;
+  }
+  .app-header .brand {
+    font-size: 16px;
+    gap: 8px;
+  }
+  .app-header .brand small {
+    font-size: 6px;
+    letter-spacing: 1px;
+  }
+  .workspace-menu-toggle {
+    margin-left: auto;
+    padding: 8px;
+  }
+  .workspace-menu-toggle span {
+    display: none;
+  }
+  .app-body {
+    grid-template-columns: 46px minmax(0, 1fr);
+    min-height: calc(100dvh - 72px);
+  }
+  .app-rail {
+    width: 46px;
+    top: var(--app-topbar-height, 72px);
+    height: calc(100dvh - var(--app-topbar-height, 72px));
+    min-height: 0;
+    padding: 10px 4px;
+    gap: 10px;
+  }
+  .app-rail > button {
+    width: 36px;
+    height: 38px;
+    padding: 7px;
+  }
+  .app-rail .rail-bottom {
+    display: none;
+  }
+  .app-topbar .workspace-nav {
+    padding: 10px 12px;
+  }
+  .workspace-content main {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .app-rail {
+    overflow-y: auto;
   }
 }

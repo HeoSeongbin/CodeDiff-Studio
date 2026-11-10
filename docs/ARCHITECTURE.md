@@ -78,3 +78,9 @@ Folder read/classification/relative matching은 기존 엔진에 남고 async te
 `playwright.config.ts`는 로컬 Edge, CI Chromium을 사용한다. `playwright.deployment.config.ts`는 로컬 preview 또는 CODEDIFF_DEPLOYMENT_URL의 실제 정적 사이트를 검사한다. 브라우저의 파일 업로드는 File API로 읽으며 네트워크 업로드 API를 호출하지 않는다. 배포 테스트는 HTTP GET/HEAD 외 요청·외부 origin·pageerror·실패 응답을 감시하고 원본 fixture 디스크 내용을 다시 확인한다.
 
 성능 측정은 별도 수동 test:perf로 유지한다. 매번 실행하는 회귀 gate에 한 환경의 시간/heap 수치를 SLA로 고정하지 않는다. Pages가 이미 게시된 버전과 작업 트리의 변경을 구분하며, 로컬 테스트 통과가 원격 신규 workflow의 성공을 뜻하지 않는다.
+
+## 사용자 요청 UI 정리 · 공통 레이아웃
+
+`components/AppShell.tsx`가 모든 도구 바깥에서 하나의 header/rail/menu를 렌더한다. App은 typed WorkspaceId와 최초 열린 도구 목록을 유지해 기존 lazy mount·hidden panel 수명을 보존한다. CodeCompare는 비교 작업 영역과 결과만 렌더하며 모델·원문·Worker 정책은 그대로다.
+
+헤더의 메뉴 버튼이 상단 nav를 hidden으로 토글한다. 닫혀 있을 때 키보드 탐색과 접근성 트리에서 제외되고, 왼쪽 nav는 항상6개 작업 공간의 진입점을 제공한다. 메뉴의 탭 버튼과 rail의 접근 가능한 이름을 구분해 테스트·키보드 사용에서도 경로가 명확하다. topbar ResizeObserver는 줄바꿈 높이를 rail의 sticky offset에 전달하고 unmount 시 해제한다. 화면 설정은 공통 메뉴 안의 기존 컴포넌트를 재사용한다.
