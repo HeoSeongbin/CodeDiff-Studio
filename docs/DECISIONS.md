@@ -235,3 +235,26 @@ StrictMode 보완: 개발 모드의 시험 mount에서 즉시 Worker를 생성�
 - 레이아웃: sticky 헤더와 rail. ResizeObserver로 실제 topbar 높이를 측정해 메뉴 줄바꿈·모바일에서도 rail이 헤더 뒤로 숨지 않게 한다. observer는 unmount 때 해제한다. 화면 설정 팝업은 헤더 아래로 열어 메뉴 닫기 버튼을 가리지 않는다.
 - 영향: components/AppShell.tsx, app/App.tsx, app/CodeCompare.tsx, style.css. phase8/performance 테스트는 화면 설정 전 메뉴를 열도록 사용 흐름만 조정한다. 신규 의존성 없음.
 - 검증: UI E2E로 header/rail DOM 동일성,6개 공간 이동·선택 표시·CRLF 원문 저장, 기본 숨김/키보드 열기/Escape/버튼 닫기, Light 설정 보존,390/768px overflow·팝업 범위·scroll sticky를 확인한다. 최초 팝업이 닫기 버튼을 가린 실패는 위치 수정 후 재검증한다. 전체 결과는 PROGRESS 최신 기록 참조.
+
+## ADR-024 · 2026-11-10 · Code Compare의 단일 비교 결과와 시각 어댑터
+
+- 문제: 옵션은 core/diff의 분석에 적용됐으나 Monaco 기본 비교는 다른 기준을 사용했다. 후행 공백 옵션이 들여쓰기까지 숨기고 내부 공백/빈 줄/대소문자 강조는 남았으며 EOL은 통계만 바뀌었다.
+- 선택: 기존 Text 엔진은 그대로 두고 Code Compare의 text Worker 요청에만 visual=true를 추가한다. core/visualDiff는 동일 hunks를 물리 줄/원문 UTF16 문자 범위로 투영한다. 두 번째 줄 비교나 정규화된 편집 문서는 만들지 않는다. JSON/Folder/Syntax/Patch 책임 및 원문 정책은 유지한다.
+- 시각: CoreDiffProvider가 기존 Monaco Diff Editor에 Worker에서 받은 범위를 전달한다. 좌우/Unified, 원문 편집, MiniMap, 탐색/접기를 유지한다. EOL/EOF 차이는 원문에서 추출한 라벨을 zero-length injected text로 표시하며 모델 값/복사/저장에 넣지 않는다. 후행 공백은 들여쓰기를 건드리지 않으며 Unicode case expansion/astral 문자의 원래 UTF16 열로 매핑한다.
+- 대안: 정규화 문자열을 편집 모델에 넣으면 원문/편집/복사 보존이 깨진다. 두 개의 새 에디터로 재구현하면 Unified·정렬·접기 수명 회귀가 크다. 기본 diffAlgorithm 옵션은 커스텀 provider를 공개 타입으로 받지 않는다. createDiffEditor의 서비스 override는 첫 전역 초기화에만 적용돼 초기 시도는 실제 브라우저에서 실패했다.
+- 호환성 경계: Code Compare 인스턴스의 child instantiation service에만 diff provider를 주입한다. 어댑터 한 파일과 types/monaco-diff.d.ts에 Monaco 내부 계약을 격리하고 버전을0.52.2로 고정한다. 전역 서비스를 교체하거나 private editor 필드를 패치하지 않는다. Folder/Syntax는 기존 native factory 그대로다. Monaco 업데이트 시 이 내부 생성 경계를 재검증해야 한다는 유지보수 비용을 수용한다.
+- 수명/동시성: ManagedDiffEditor의 공개 view-model 소유/취소/모델 재사용을 유지하고 child service를 unmount 때 dispose한다. core 결과가 없거나 모델 텍스트가 snapshot과 다르면 이전 강조를 지운다. 취소/오류는 workspace에서 표시하고 이를 Monaco timeout 또는 파일 동일로 처리하지 않는다. EOL 정규화 snapshot은 원문 변경 때만 계산한다.
+- 한도: visual 요청만 Worker에서 투영하고 줄 내부는 양쪽합20k자/라인20ms/전체100ms 예산이다. 한도 초과는 행 강조로 폴백하고 안내한다. 원문·통계·행 범위는 자르지 않는다. JS heap 측정은 전체 브라우저 메모리가 아니며 최신 검증/성능은 PROGRESS와 별도 JSON을 따른다.
+- 영향: core/visualDiff, components/CoreDiffProvider, ManagedDiffEditor, app/CodeCompare, workers/protocol/execute, style, package/lock, 단위/E2E 및 문서. 새 의존성 다운로드/외부 서버 처리 없음.
+- 검증: 원문/EOL·옵션 ON/OFF·좌우/Unified·빈 모델/EOF·필터 후 물리 좌표·접기/편집·기존 다른 도구 회귀 및 별도 대용량12시나리오. 성공/실패와 최종 수치는 PROGRESS에 기록한다.
+
+## ADR-025 · 2026-11-10 · CSV leaf 타입 보존과 명시적 빈 레코드 처리
+
+- 문제: Flatten이 숫자를 문자열화한 뒤 수식 방어에 넘겨 음수에 작은따옴표가 붙었다. 빈 테이블은 빈 문자열 결과가 UI에서 숨겨졌고, 빈 Header를 내보낸 뒤에는 가져오지 못했다. 기본 JSON 예제와 CSV 입력창의 혼동도 확인했다.
+- 선택: flatten은 Json leaf 타입을 보존하고 최종 CSV 셀 단계에서 배열/객체만 JSON 문자열로 만든다. 숫자/boolean/null과 수식 문자열을 구분하며 Papa의 escapeFormulae는 유지한다. 데이터/컬럼이 없거나 실제 선택 Header가 비어 있으면 명시적으로 거부한다. Flatten의 '/' Pointer처럼 비어 있지 않은 출력 Header는 계속 지원한다.
+- 빈 행: 기존 엄격 동작을 기본으로 보존하고 skipEmptyRows를 명시적으로 추가한다. Papa의 skipEmptyLines=true는 따옴표로 감싼 빈 값도 지울 수 있어 사용하지 않는다. step의 raw cursor를 원문 레코드와 대조해 완전히 빈 비인용 레코드만 건너뛰며 quoted empty/공백/구분자 행/인용 내부 개행은 유지한다. BOM을 먼저 정리해 cursor 기준을 맞추고 오류 번호에는 원래 CSV 레코드 순서를 사용한다.
+- UI: CSV→JSON이면 왼쪽에 Source CSV를 표시하고 JSON 원문/모델은 unmount하지 않고 숨겨 보존한다. 방향별 예제를 제공하고 CSV 변환 오류는 버튼 옆에 둬 모바일에서도 찾을 수 있게 한다. source CSV 복사/저장은 현재 메모리만 사용한다. 문자 입력은 textarea의 LF 정규화가 가능하고 파일 업로드 직후 raw CRLF 보존과 구분한다.
+- 동시성: skipEmptyRows도 action snapshot/결과 무효화에 포함한다. 새 입력/방향/옵션/탭/취소 시 이전 Worker 결과를 버리는 기존 경계는 유지한다. CSV는 Worker 안에서 처리하고 원본 파일을 쓰거나 외부 서버에 보내지 않는다.
+- 대안: 빈 행을 항상 지우면 기존 단일 컬럼 빈 레코드 의미가 바뀐다. 모든 문자열 수식 방어를 끄면 숫자 문제는 가려도 기존 방어 정책을 잃는다. 기본 JSON을 탭 전환 때 자동 교체하면 사용자 입력을 바꾸므로 명시적 예제 버튼만 사용한다.
+- 영향: core/json/csv, JSON workspace/store, Worker jsonAction 옵션, CSS·관련 단위/E2E·문서. 새 의존성 없음. Text/JSON 구조 비교/Folder/Syntax/Patch 정책은 변경하지 않는다.
+- 검증: CSV23개 단위·Worker 통합(총397), 신규 CSV UI 및 기존 전체 production 회귀. 최종 수치와 최초 fixture 오류·편집 LF/업로드 CRLF 차이는 PROGRESS에 기록한다. 원격 CI·실제 사이트 결과와 로컬 결과를 구분한다.

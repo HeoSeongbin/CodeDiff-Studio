@@ -4,7 +4,7 @@
 
 ## 현재 Phase
 
-Phase 9 — 통합 테스트 및 배포. 릴리스 테스트·로컬 production 전체 회귀·실제 Pages 기능 검증·문서 정리 완료. 새 reusable CI와 배포 gate의 원격 실행은 커밋·푸시 후 검증 대기이므로 Phase9 전체 완료로 처리하지 않는다. 사용자 요청 UI 정리(공통 헤더/왼쪽 메뉴·접이식 상단 메뉴)를 추가 구현·로컬 검증했다. 최신 상태는 하단2026-11-10 UI 기록을 기준으로 하며 이전 기록은 당시 이력이다.
+Phase 9 — 통합 테스트 및 배포. 릴리스 테스트·로컬 production 전체 회귀·실제 Pages 기능 검증·문서 정리 완료. 새 reusable CI와 배포 gate의 원격 실행은 커밋·푸시 후 검증 대기이므로 Phase9 전체 완료로 처리하지 않는다. 사용자 요청 UI 정리(공통 헤더/왼쪽 메뉴·접이식 상단 메뉴)를 추가 구현·로컬 검증했다. 후속 요청으로 Code Compare 옵션의 분석·시각 일치를 수정하고 로컬 검증했다. 추가로 JSON↔CSV 타입 보존·입력/오류·빈 레코드 처리를 수정하고 로컬 검증했다. 최신 상태는 하단2026-11-10 CSV 기능 수정 기록을 기준으로 하며 이전 기록은 당시 이력이다.
 
 ## 완료 작업
 
@@ -464,3 +464,96 @@ AGENTS/PROJECT/PROGRESS/DECISIONS/README, 실제 소스 및 jsdiff의 create/app
 
 - 이번 UI 변경은 공통 레이아웃 커밋에 포함하며 미푸시·미배포 상태로 남긴다. 기존8517b80 커밋도 아직 미푸시다. 실제 Pages는 이전 배포 UI다. 이번 로컬34개 결과를 실제 배포 검증으로 표현하지 않는다.
 - 다음은 사용자가 확인한 UI를 커밋·푸시한 뒤 새 CI regression/build/deploy 및 실제 Pages를 재검증하는 작업이다. Phase9 원격 CI 검증 대기 상태와 실기기/다른 브라우저 미검증은 유지한다.
+
+## 2026-11-10 · Code Compare 비교 옵션 동작 점검
+
+- 사용자 요청은 비교 옵션 확인 및 결과 보고. 작업 시작 Git은 fc3c173, origin/main보다2개 앞섬, 깨끗한 작업 트리였다. AGENTS/PROJECT/PROGRESS/DECISIONS와 core/options/UI/Monaco 설치 소스를 확인했다.
+- 기능 코드는 수정하지 않았다. ignored test-results/option-audit/에 진단용 Playwright script·JSON·화면을 만들어 로컬 production13입력 × 좌우/Unified26사례, 실제 Pages5사례를 확인했다.
+- 옵션 OFF→ON→OFF의 분석 통계·목록/탐색과 원문 다운로드는26사례 모두 기대와 일치했다. 하지만 화면 강조와 변경 유무가 어느 단계에서든 달라지는 사례가16/26이었다. 분석과 표시가 완전히 정상이라는 결론이 아니다.
+- 공백 무시의 행 내부 공백, 빈 줄 무시, 대소문자 무시는 분석0이 돼도 에디터 강조가 남았다. 줄 끝 공백 무시는 들여쓰기 차이를 분석에 남기면서 에디터에서 숨겼다. EOL 무시를 꺼도 CRLF/LF/CR 차이는 통계만 바뀌고 에디터 강조가 없었다. 양쪽 보기에서 재현됐다.
+- 실제 https://heoseongbin.github.io/CodeDiff-Studio/ 의5개 대표 사례도 같은 불일치를 재현했다. pageerror·외부 요청0, 양쪽 다운로드 원문 보존. 초기 배포 진단 스크립트의 도메인 루트 이동 오류는 프로젝트 ./ 경로로 수정 후 재실행했으며 제품 결함으로 집계하지 않았다.
+- 원인: core/diff의 옵션별 정규화/필터와 Monaco ignoreTrimWhitespace 설정의 의미가 다름. 특히 Monaco는 줄 앞/뒤 공백을 함께 무시한다. README의 줄끝 공백만 무시한다는 부정확한 설명을 정정하고 상세 보고서 COMPARE-OPTIONS-AUDIT.md를 추가했다. 변경은 README·점검 보고서·이 진행 기록뿐이다.
+- npm test351/351, typecheck/lint/build 통과. 기존 테스트는 분석/원문 보존 중심이어서 모든 옵션의 시각 일치 문제를 검출하지 못했다. 진단 실행 성공을 제품 전체 정상으로 표시하지 않는다.
+- 다음 수정 과제: 원문·물리 줄 번호·편집·다운로드를 보존하며 분석/시각 비교 기준을 맞추고 옵션별 강조·탐색·접기 회귀를 추가한다. 이번에는 결과 보고만 하며 미해결 상태를 유지한다. 신규 기술 선택/동작 수정/커밋/푸시는 하지 않았다.
+
+## 2026-11-10 · Code Compare 옵션 기능 수정 및 검증
+
+### 범위 / 시작 상태
+
+- 사용자 요청에 따라 직전 점검에서 확인한5개 비교 옵션의 분석·시각 불일치를 수정했다. AGENTS/PROJECT/PROGRESS/DECISIONS·실제 소스·Git을 다시 확인했다. 시작은 fc3c173, origin/main보다2개 앞섬. 이전 점검의 README/PROGRESS 및 COMPARE-OPTIONS-AUDIT.md 변경을 보존했다.
+- UI 표시 연결만 Code Compare에 적용한다. Text 엔진의 정책·정확성 기준, JSON/Folder/Syntax/Patch의 독립 책임, 원본 파일·메모리 입력·다운로드 정책은 유지한다. 새 Phase를 만들거나 배포하지 않는다.
+
+### 구현 / 주요 변경 파일
+
+- core/visualDiff.ts: 동일 Text hunks를 원문 물리 행/UTF16 문자 범위로 투영. 가로 공백/후행 공백/빈 줄/Unicode case를 적용한 문자 비교 결과는 원래 열로 돌아가고, 건너뛴 빈 줄은 강조 범위에 넣지 않는다. CRLF/CR/LF/EOF 차이 표기 데이터도 원문에서 추출한다.
+- workers/protocol/execute: Code Compare의 visual=true 요청에만 Worker에서 투영 데이터를 붙인다. 일반 Text 및 Folder comparator 요청은 종전 반환 형태를 유지한다. 줄 내부 작업은20k자/라인20ms/총100ms 예산, 초과 시 원문·통계·행 강조를 유지하며 줄 내부만 제한한다.
+- components/CoreDiffProvider.ts + types/monaco-diff.d.ts: 인스턴스별 child service에 core 결과를 주입한다. 전역 override나 다른 도구의 native provider를 바꾸지 않는다. Monaco 내부 계약을 한 어댑터에 격리하고 package.json/lock의 monaco-editor를 설치된0.52.2로 고정했다. 신규 의존성 다운로드 없음.
+- ManagedDiffEditor: 기존 공개 view-model 취소·동기 해제·모델 재사용을 유지하고 child service를 정리한다. 원문과 snapshot이 다르거나 core 결과가 대기/취소 중이면 이전 강조를 지운다. EOL/EOF 표기는 zero-length injected decoration이며 모델/원문/복사/저장에 포함하지 않는다.
+- CodeCompare/style: ignoreTrimWhitespace로 후행 공백과 들여쓰기를 혼동하던 연결을 제거하고 core 결과를 시각 provider로 전달한다. 옵션이 통계/목록/강조에 함께 적용됨을 안내하며 큰 변경의 줄 내부 표시 제한도 명시한다.
+- 신규 단위 visual-diff.test.ts23개, 신규 E2E compare-options.spec.ts42개. performance fixture에 출력 파일 환경 변수를 추가해 과거 Phase8 JSON을 덮어쓰지 않았다.
+- README·ARCHITECTURE·ADR-024·COMPARE-OPTIONS-AUDIT·TEST-CASES·PERFORMANCE·릴리스 검증 기록 최신화. compare-options-fixed.png / compare-eol-fixed.png는 로컬 수정 후 화면이며 시각 검토했다.
+
+### 검증 결과
+
+- npm test **374/374 통과**(기존351 + visual23), typecheck/lint/production build 통과. npm ls monaco-editor로0.52.2 확인.
+- 최종 production Edge 전체 E2E **76/76 통과**(기존34 + 신규42).13종 × 좌우/Unified26개 OFF/ON/OFF 시 분석/강조 일치·양쪽 원문 저장, 들여쓰기/내부/후행 공백 구분, 빈 줄 물리 좌표·접기/편집·빈/EOF 모델10개·100빈줄 뒤120→20 이동을 포함한다. 기존 JSON/Mapping/Patch/Folder/Syntax·Worker 취소/오류·새 입력·테마/MiniMap/모델 수 회귀도 통과했다.
+- 수정 화면에서 대소문자 무시 후+0/−0·강조0, EOL 무시 해제 후+2/−2·CRLF/LF 라벨/행 강조를 확인했다. 저장된 원문에는 라벨이 없다.
+- 별도 production 성능 **1/1,12시나리오 통과**. compare-options-performance.json 기록.50k줄 약530ms,5MiB 단일 행 약1174ms,취소50k 약1929ms(업로드부터 관측까지). main-target heap13.2→50.1MiB, 모델6개, pageerror/외부 요청0. 한 환경의 단일 표본이며 Worker/native/GPU/peak·모든 렌더 완료·SLA 측정이 아니다. 최종 대기 상태의 timeout 표시 정리 전 동일 계산/투영 정책에서 측정했음을 PERFORMANCE에 구분했다.
+
+### 발견·해결 / 한계
+
+- 첫 createDiffEditor override는 이미 초기화된 전역 서비스에 반영되지 않아 시각 검사 실패. child service 생성으로 Code Compare만 격리한 후 정상 검증했다. EOL marker는 collapsed decoration 표시를 명시해 해결했다.
+- 추가100빈줄 Unified 검사에서 원문 삭제 view zone과 실제 편집 행 selector가 중복돼 실패했다. 실제 편집 행을 구분하는 selector로 수정해2/2, 이후 최종 전체76/76 통과했다. 실패를 검증 완료로 숨기지 않았다.
+- Monaco 내부 생성/범위 계약 의존성이 있어 버전 업그레이드 시 어댑터·production 전체 회귀 재검증이 필요하다. native editor를 포크하거나 정규화 원문으로 대체하지 않았다. 기존 chunk·Tree-sitter glue eval/Node externalization 경고는 유지한다.
+-5MiB 입력에서 약269ms main-loop 지연이 여전히 관측된다. 큰 변경은 제한된 줄 내부 표시로 폴백하며 행/통계는 유지한다. 다른 OS/브라우저·실기기·실제 수정본 배포는 미검증이다.
+
+### 상태 / 다음 작업
+
+- 이번 수정은 미커밋·미푸시·미배포. 기존8517b80/fc3c173도 아직 미푸시다. 현재 실제 Pages는 수정 전 버전이므로 로컬 성공을 실제 사이트 수정 완료로 표현하지 않는다.
+- 다음은 수정 검토 후 커밋·푸시, 원격 CI regression/build/deploy 및 실제 Pages 옵션 검증이다. Phase9 원격 확인 대기 상태를 유지한다. 과거 Phase·UI 화면의 자동 재생성본은 시작 커밋 버전으로 복원하고 이번 수정 화면만 남긴다.
+
+## 2026-11-10 · JSON ↔ CSV 동작 점검
+
+- 사용자 요청은 변환 확인 및 결과 보고. AGENTS/PROJECT/PROGRESS/DECISIONS 및 core/json/csv, JSON workspace, Worker 경계를 확인했다. fc3c173/원격보다2개 앞섬과 이전 Code Compare 미커밋 작업을 보존했다.
+- 임시 core 진단14개, 로컬 production Edge UI19개, 실제 Pages7개 대표 상태를 확인했다. 합성 입력만 사용했고 pageerror/외부 요청0. 표시된 출력의 다운로드는 미리보기 textContent와 일치했다.
+- 문제1: Flatten이 숫자 leaf를 문자열로 만든 뒤 수식 방어에 넘겨 -12/-3이 "'-12"/"'-3"으로 출력된다. 타입 추론으로 다시 읽어도 작은따옴표 포함 문자열이 된다. 로컬 및 실제 배포에서 재현.
+- 문제2: []/[{}]는 빈 문자열 결과가 output truthiness 조건에서 숨겨져 안내/미리보기/저장이 없다. []은 실배포에서도 재현. 데이터/컬럼 없음 안내가 필요하다.
+- 기본 JSON 예제의 단일 객체는 Object Array 계약에 따라 거부된다. 변환 전용 예제/안내의 UX 문제와 알고리즘 실패를 구분한다. 빈 JSON 키는 CSV 내보내기에서 허용되지만 다시 읽을 때 빈 Header 정책으로 거부되는 불일치도 확인했다.
+- 정상: 한글/인용/쉼표/멀티라인, 컬럼 선택·순서, CSV comma/semicolon/tab, 안전한 타입 추론 및 선행0/큰 정수 문자열 보존, 잘못된 CSV 오류, 새 입력 때 결과 폐기. 다중 컬럼 CSV의 빈 행 거부는 현재 엄격한 파싱 정책이다. CSV→JSON은 별도 CSV 입력을 사용하며 관련 없는 왼쪽 JSON 오류가 남는 UI도 기록했다.
+- 최초 진단의 결과 렌더 시점/선택 후 체크박스 이름 문제를 보완하고 전체를 재실행했다. 진단 자체의 실패는 제품 결함으로 집계하지 않았다.
+- npm test374/374, typecheck/lint/build 통과. core/json/csv.ts·JsonWorkspace.tsx·JSON store/CSV Worker 분기는 변경하지 않았다. 상세는 CSV-CONVERSION-AUDIT.md, 진단 원시 자료는 ignored test-results/csv-audit/에 저장했다.
+- 이번에는 점검 결과만 기록한다. 음수 타입 보존·빈 결과 안내·헤더 정책 일관성·변환 전용 예제를 후속 수정 대상으로 남긴다. 기존 Code Compare 수정의 미커밋·미배포 상태 및 Phase9 원격 검증 대기도 유지한다.
+
+## 2026-11-10 · JSON ↔ CSV 기능 수정 및 검증
+
+### 범위 / 시작 상태
+
+- 사용자 요청에 따라 직전 CSV 점검의 음수 Flatten/빈 결과 안내/빈 Header/입력 혼동을 수정하고 빈 행 선택 처리를 추가했다. AGENTS/PROJECT/PROGRESS/DECISIONS·실제 CSV/JSON UI/Worker·Git 확인. 시작은 fc3c173, 원격보다2개 앞섬, 이전 Code Compare 및 점검 문서 미커밋 변경을 보존했다.
+- Text/JSON 구조 비교/Folder/Syntax/Patch 책임과 원본 파일·서버 미전송 정책을 유지한다. 새 Phase나 배포 작업으로 확장하지 않았다.
+
+### 구현 / 주요 파일
+
+- core/json/csv.ts: flatten leaf를 Json 타입으로 보존하고 직렬화에서 배열/객체 셀만 문자열로 만든다. 음수 숫자에는 접두사를 붙이지 않고 수식 시작 문자열의 방어는 유지한다. 데이터/컬럼 없음·실제 선택 Header가 빈/공백인 내보내기를 명확히 거부한다.
+- CSV 가져오기에 skipEmptyRows 선택 옵션을 추가했다. 기본 strict 유지. Papa step raw cursor를 원문 레코드와 대조해 비인용 완전 빈 레코드만 제외한다. quoted empty·공백 데이터·구분자 행·인용 내부 개행을 보존하고 BOM/원래 레코드 순서 오류 번호를 처리한다. 입력1MiB 한도 유지.
+- workers/protocol/execute: fromCsv 옵션만 확장하며 Worker 처리·기존 취소 경계 유지.
+- JsonWorkspace/jsonWorkspace store/style: 변환 방향에 맞춰 Source JSON/Source CSV를 표시한다. JSON 원문·모델은 숨겨 보존한다. CSV 원문 복사/저장·입력/업로드, 방향별 예제, 빈 행 옵션 및 버튼 옆 CSV 오류를 제공한다. 예제는 클릭 때만 현재 메모리를 바꾸며 upload version도 갱신한다. 새 옵션도 snapshot/결과 무효화에 포함한다.
+- csv-regressions.test.ts23개, csv-conversion.spec.ts17개 추가. README/ARCHITECTURE/ADR-025/CSV-CONVERSION-AUDIT/TEST-CASES/릴리스 검증 기록 최신화. csv-conversion-fixed/mobile.png는 로컬 수정 화면이다.
+
+### 최종 검증
+
+- npm test **397/397 통과**(이전374 + CSV23), TypeScript/ESLint/Production Build 통과. 신규 의존성/패키지 변경 없음(이전 Code Compare의 Monaco pin은 유지).
+- 최종 production Edge 전체 E2E **93/93 통과**(이전76 + CSV17). 음수/boolean/null 보존·문자열 수식 방어·다운로드, []/[{}]/빈 Header 오류,3구분자/한글/따옴표/멀티라인/타입 추론, quoted empty 보존/빈 행 선택, 독립 JSON 원문·모델 보존, 잘못된 CSV·새 입력 후 stale 차단, 방향별 예제/컬럼 순서, CSV 업로드 BOM/원문 CRLF·모바일 overflow·모바일 오류 가시성을 검증했다. 이전 Code Compare 옵션/JSON/Mapping/Patch/Folder/Syntax/Worker/UI 회귀도 통과했다.
+- 각 결과 저장은 미리보기 textContent와 일치했다. 업로드 CSV는 BOM 디코딩 후 CRLF 원문을 보존했다. textarea 직접 입력/편집은 LF가 될 수 있으며 이 경우 현재 메모리 내용으로 저장되는 것을 구분해 테스트했다. 업로드 파일을 쓰거나 합성 입력을 서버로 전송하지 않았으며 pageerror/외부 요청0.
+- 데스크톱 음수 Flatten 및 모바일 CSV→JSON 화면을 생성/시각 검토했다. 화면 저장 전 scroll0으로 복귀해 sticky header가 중간에 찍히지 않도록 했다. 과거 Phase/UI 자동 재생성 이미지는 시작 커밋으로 복원하고 새 CSV 화면만 유지한다.
+
+### 발견·해결 / 한계
+
+- 처음 단위 테스트3개는 it.each 배열을 인자로 풀어 전달한 fixture 오류였다. 객체 fixture와 Json 타입 주석을 보완해23개 모두 통과했다.
+- 첫 CSV E2E13/16 통과 후,3개 실패는 textarea 입력을 원래 CRLF와 같다고 기대한 부분이었다. 브라우저 편집 LF와 파일 업로드 CRLF를 구분하는 검증으로 수정했다. 이후 전체92/92 통과했고, 모바일 오류가 버튼 옆에 보이는지 추가해 최종93/93 통과했다.
+- CSV는 타입/중첩 구조의 완전한 왕복 복원을 보장하지 않는다. 수식 문자열 접두사·JSON Pointer Header·strict 기본값을 유지한다. 빈 행 옵션은 whitespace/quoted empty 데이터를 임의로 삭제하지 않는다. 입력1MiB, JSON 값 제한 및 기존 chunk/Tree-sitter 경고는 유지한다.
+- 이번 CSV 변경에서 성능 benchmark를 재측정하지 않았다. compare-options-performance.json은 이전 Code Compare 시각 수정의 측정이며 새 CSV 성능으로 보고하지 않는다. 다른 OS/브라우저·실기기·실제 수정본 Pages/원격 CI는 미검증이다.
+
+### 현재 상태 / 다음 작업
+
+- CSV 및 기존 Code Compare 수정은 미커밋·미푸시·미배포. 이전8517b80/fc3c173도 미푸시 상태다. 실제 사이트는 이전 버전이므로 로컬 수정 결과를 실제 배포 완료로 표현하지 않는다.
+- 다음은 변경 검토·커밋/푸시 후 CI regression/build/deploy 및 실제 Pages의 CSV/비교 옵션 재검증이다. Phase9 원격 검증 대기를 유지하며 임의의 다음 Phase를 만들지 않는다.

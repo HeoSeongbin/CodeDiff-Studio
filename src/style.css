@@ -2329,3 +2329,17 @@ a:focus-visible {
     overflow-y: auto;
   }
 }
+.diff-eol-marker {
+  color: var(--readable-muted);
+  background: var(--c-202630);
+  border: 1px solid var(--c-424956);
+  border-radius: 3px;
+  font-size: 10px;
+  padding: 0 3px;
+}
+
+.csv-source-input {
+  min-height: 280px;
+  height: var(--editor-height, 600px);
+  resize: vertical;
+}

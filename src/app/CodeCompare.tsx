@@ -1,5 +1,6 @@
 import { useNarrowScreen } from '../hooks/useNarrowScreen';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { CoreDiffProvider } from '../components/CoreDiffProvider';
 import { ManagedDiffEditor as DiffEditor } from '../components/ManagedDiffEditor';
 import type { editor } from 'monaco-editor';
 import {
@@ -30,6 +31,7 @@ export default function CodeCompare() {
   const job = useMemo(
     () => ({
       kind: 'text' as const,
+      visual: true,
       original: state.original.text,
       modified: state.modified.text,
       options: state.options,
@@ -38,6 +40,10 @@ export default function CodeCompare() {
   );
   const computation = useCompute(job);
   const { result, busy, error: compareError } = computation;
+  const diffProvider = useMemo(() => new CoreDiffProvider(), []);
+  useLayoutEffect(() => {
+    diffProvider.publish(state.original.text, state.modified.text, result?.visual);
+  }, [diffProvider, state.original.text, state.modified.text, result?.visual]);
 
   const [active, setActive] = useState(0);
   const [encoding, setEncoding] = useState('auto');
@@ -284,6 +290,8 @@ export default function CodeCompare() {
             )}
             <div className="editor-area">
               <DiffEditor
+                diffProvider={diffProvider}
+                lineEndings={result?.visual?.endings}
                 height="100%"
                 language={state.language}
                 original={state.original.text}
@@ -308,9 +316,7 @@ export default function CodeCompare() {
                   lineHeight: 23,
                   minimap: { enabled: prefs.minimap && !narrow },
                   scrollBeyondLastLine: false,
-                  ignoreTrimWhitespace: !!(
-                    state.options.ignoreWhitespace || state.options.ignoreTrailingWhitespace
-                  ),
+                  ignoreTrimWhitespace: false,
                   renderOverviewRuler: true,
                   padding: { top: 16 },
                   diffWordWrap: wrap ? 'on' : 'off',
@@ -485,14 +491,19 @@ export default function CodeCompare() {
           {result?.hunks[active] && <ChangeDetail hunk={result.hunks[active]} unit={unit} />}
           <div className="analysis-note">
             <b>비교 결과 안내</b>
+            {result?.visual?.limited && (
+              <p>
+                큰 변경은 줄 내부 강조를 제한하고 변경 행 전체를 표시합니다. 원문과 변경 통계는
+                유지됩니다.
+              </p>
+            )}
             <p>
               추가·삭제는 Diff 연산 결과입니다. ‘수정 추정’은 같은 변경 블록의 삭제와 추가를 묶은
               판정입니다.
             </p>
             <p>
-              옵션은 분석 목록에 적용됩니다. 변경 상세는 원문 차이를 보여줍니다. Monaco 강조와 변경
-              영역 접기는 자체 알고리즘을 사용하며 공백·빈 줄·대소문자·줄바꿈 옵션과 다를 수
-              있습니다.
+              비교 옵션은 통계·목록·에디터 강조에 함께 적용됩니다. 변경 상세와 Patch는 원문
+              기준입니다. 줄바꿈 형식 또는 마지막 개행 차이는 에디터의 줄 끝 표기로 확인하세요.
             </p>
           </div>
         </aside>

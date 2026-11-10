@@ -8,7 +8,7 @@ npm run build
 npm run test:e2e
 ```
 
-최신 검증(2026-11-10): 단위·통합 **351/351**, production Edge **34/34**, 실제 Pages Edge **8/8**, typecheck/lint/build 통과. 아래 Phase별 기록은 당시 이력이며 최신 범위·제한은 하단 Phase9와 RELEASE-CHECKLIST.md를 따른다. Monaco 번들 크기 경고 유지.
+최신 검증(2026-11-10): 단위·통합 **397/397**, production Edge **93/93**, 실제 Pages Edge **8/8**, typecheck/lint/build 통과. 아래 Phase별 기록은 당시 이력이며 최신 범위·제한은 하단 Phase9와 RELEASE-CHECKLIST.md를 따른다. Monaco 번들 크기 경고 유지.
 
 ## 단위 테스트
 
@@ -123,3 +123,18 @@ Phase 4 당시 결과: 단위 **161/161**, Edge E2E **12/12**, typecheck/lint/bu
 - app-shell.spec.ts:6개 작업 공간에서 header/rail DOM 유지·선택 상태·원문 CRLF 저장, 기본 숨김과 header 위 메뉴 펼침·키보드/Escape·닫기 버튼·Light 보존,390/768px 공통 rail 유지·수평 overflow 없음·팝업 범위·sticky 확인. pageerror/외부 요청0.
 - 설정 팝업이 닫기 버튼을 가리는 최초 실패를 헤더 아래 배치로 해결 후 재검증했다. phase8/performance 설정 진입 fixture는 메뉴 열기 단계를 포함한다. 성능 측정은 재실행하지 않았다.
 - ui-shell-code/menu/mobile.png는 새 로컬 production UI. phase9-deployed 이미지는 당시 실제 배포 이력이다. 현재 UI는 아직 실제 Pages에 게시하지 않았다.
+
+## Code Compare 옵션 표시 일치 · 2026-11-10
+
+- visual-diff.test.ts 신규23개:5개 옵션과 조합, 앞/뒤/내부 공백 구분, 빈 줄의 물리 간격, Unicode case expansion/문맥 sigma/astral UTF16 열, CRLF/CR/LF/EOF, 빈 모델 앵커, 제한 시 행 강조, Worker visual opt-in/기존 요청 보존. 단위·통합 합계374/374 통과.
+- compare-options.spec.ts 신규42개:13입력 × 좌우/Unified26개에서 OFF/ON/OFF의 분석과 시각 강조 일치 및 양쪽 원문 저장, 빈 줄 필터 후 물리21→20 이동·접기, 완전 무시 후 편집, 빈 모델/EOF10개,100개 빈 줄 뒤120→20 접기/탐색2개.
+- 최초 검사로24/26이 통과했고 EOL marker zero-length 표시를 수정했다. 이후 전체74개(기존34 + 당시신규40) 통과, 추가100빈줄2개는 Unified 미리보기/실제행 selector 중복 수정 후2/2 통과. 최종 빌드에서는76개 전체를 재실행한다. 실제 최종 수치는 PROGRESS를 따른다.
+- 성능12시나리오는 별도 compare-options-performance.json에 기록했다. 원래 phase8-performance.json은 보존한다. 실배포/원격CI 결과와 로컬 결과는 구분한다.
+
+최종 확인: npm test374/374, typecheck/lint/build 및 production Edge 전체76/76 통과. 수정 후 대소문자 무시·EOL 표기 화면을 생성/시각 검토했다. 직전 중간74개 및 추가2개 기록과 구분하며, 실제 수정본 배포는 아직 수행하지 않았다.
+
+## JSON ↔ CSV 수정 · 2026-11-10
+
+- csv-regressions.test.ts 신규23개: Flatten scalar 원형·수식 문자열 구분, 빈 테이블/컬럼/Header 명시적 검증, 컬럼 순서/Pointer, LF/CRLF/CR·BOM·step 원문 레코드/quoted empty/인용 내부 개행/공백·구분자 데이터/오류 번호, 안전 타입 추론·Worker 옵션 전달. 총397/397 통과.
+- csv-conversion.spec.ts 신규17개: 음수/문자열·미리보기와 저장 일치·원문 보존, 빈 입력2/잘못된 Header2,3구분자·유니코드·멀티라인·추론·샘플, 빈 레코드 옵션, 방향별 입력/원래 JSON 보존, 잘못된 CSV3·stale 차단·지연 Worker 취소, 객체 배열 예제/컬럼 순서, BOM/CRLF 업로드와 모바일 overflow·오류 버튼 옆 가시성.
+- 최종 production Edge 전체93/93, typecheck/lint/build 통과. 중간의 it.each fixture/TypeScript 주석 및 textarea 편집 LF 기대값 오류를 보완 후 재검증했다. 업로드 CRLF 보존은 별도 검증한다. 현재 수정은 로컬이며 실제 Pages 검증과 구분한다.

@@ -28,8 +28,9 @@ export type Job =
       columns?: string[];
       delimiter?: string;
       infer?: boolean;
+      skipEmptyRows?: boolean;
     }
-  | { kind: 'text'; original: string; modified: string; options: DiffOptions }
+  | { kind: 'text'; original: string; modified: string; options: DiffOptions; visual?: boolean }
   | { kind: 'inline'; original: string; modified: string; unit: 'word' | 'character' }
   | { kind: 'syntax'; original: string; modified: string; language: SyntaxLanguage }
   | { kind: 'json'; source: string; target: string; diff: boolean; flatten: boolean }
@@ -46,7 +47,7 @@ export interface Results {
     query?: ReturnType<typeof import('../core/json/query').queryJson>;
     validation?: ReturnType<typeof import('../core/json/schema').validateSchema>;
   };
-  text: ReturnType<typeof compareText>;
+  text: ReturnType<typeof compareText> & { visual?: import('../core/visualDiff').VisualDiff };
   inline: ReturnType<typeof compareInline>;
   syntax: SyntaxResult;
   json: {

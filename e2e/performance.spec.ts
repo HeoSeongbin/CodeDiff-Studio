@@ -212,7 +212,7 @@ test('Phase 8 production performance and responsiveness matrix', async ({
   expect(errors).toEqual([]);
   expect(external).toEqual([]);
   await writeFile(
-    'docs/phase8-performance.json',
+    process.env.CODEDIFF_PERF_OUTPUT || 'docs/phase8-performance.json',
     JSON.stringify(
       {
         date: new Date().toISOString(),

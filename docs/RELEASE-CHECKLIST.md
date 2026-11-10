@@ -67,3 +67,7 @@ Remove-Item Env:CODEDIFF_DEPLOYMENT_URL
 - 신규 reusable CI의 원격 실행, PR 이벤트 및 배포 gate는 커밋·푸시 후 Actions 결과 확인이 필요하다. 로컬 테스트로 원격 성공을 대신 표시하지 않는다.
 
 2026-11-10 사용자 요청 UI 정리 후 로컬 production 전체 회귀는34/34(기존31 + 공통 레이아웃3)이다.351개 단위 테스트와 정적 검사/build도 통과했다. 위 실제 Pages8개 결과는 이전 배포 버전에 대한 검증이며 새 공통 UI는 아직 미배포다. 최신 화면·범위는 README와 PROGRESS의 UI 기록을 따른다.
+
+최종 수정본 검증: 단위·통합374/374, production Edge 전체76/76, typecheck/lint/build 통과. 성능12시나리오는 별도 compare-options-performance.json에 기록했다. 이번 Code Compare 수정은 미배포이므로 위 실제 Pages 검증 이력과 구분한다.
+
+2026-11-10 CSV 후속 수정: 단위·통합397/397, production Edge93/93, typecheck/lint/build 통과. 음수 Flatten·빈 결과/Header·빈 레코드 옵션·방향별 입력/예제·다운로드/원문·취소·모바일을 검증했다. 이전 실제 Pages 검증은 수정 전 이력이고 현재 변경은 미배포다.

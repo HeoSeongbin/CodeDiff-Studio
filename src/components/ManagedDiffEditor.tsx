@@ -1,6 +1,8 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { DiffEditorProps } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
+import type { CoreDiffProvider } from './CoreDiffProvider';
+import type { VisualDiff } from '../core/visualDiff';
 
 type Props = Pick<
   DiffEditorProps,
@@ -13,7 +15,7 @@ type Props = Pick<
   | 'options'
   | 'onMount'
   | 'loading'
->;
+> & { diffProvider?: CoreDiffProvider; lineEndings?: VisualDiff['endings'] };
 /** Own source synchronization as well as the editor/model disposal order. */
 export function ManagedDiffEditor(props: Props) {
   const host = useRef<HTMLDivElement>(null);
@@ -32,6 +34,7 @@ export function ManagedDiffEditor(props: Props) {
     let cancelled = false;
     let current: monaco.editor.IStandaloneDiffEditor | undefined;
     let pair: monaco.editor.IDiffEditorModel | undefined;
+    let disposeServices: (() => void) | undefined;
     // StrictMode probes mount/cleanup synchronously. Do not start worker
     // requests for that discarded instance; its models would disappear first.
     queueMicrotask(() => {
@@ -42,11 +45,14 @@ export function ManagedDiffEditor(props: Props) {
         modified: monaco.editor.createModel(input.modified ?? '', input.language),
       };
       models.current = pair;
-      current = monaco.editor.createDiffEditor(host.current!, {
+      const options = {
         automaticLayout: true,
         maxComputationTime: 1500,
         ...input.options,
-      });
+      };
+      const scoped = input.diffProvider?.createEditor(host.current!, options);
+      current = scoped?.editor ?? monaco.editor.createDiffEditor(host.current!, options);
+      disposeServices = scoped?.dispose;
       instance.current = current;
       viewModel.current = current.createViewModel(pair);
       current.setModel(viewModel.current);
@@ -65,6 +71,7 @@ export function ManagedDiffEditor(props: Props) {
       current?.dispose();
       pair?.original.dispose();
       pair?.modified.dispose();
+      disposeServices?.();
       instance.current = undefined;
       models.current = undefined;
     };
@@ -110,6 +117,37 @@ export function ManagedDiffEditor(props: Props) {
   useLayoutEffect(() => {
     if (props.theme) monaco.editor.setTheme(props.theme);
   }, [props.theme]);
+  useLayoutEffect(() => {
+    const current = instance.current;
+    if (!ready || !current || !props.lineEndings?.length) return;
+    const collections = (['original', 'modified'] as const).map((side) => {
+      const editor =
+        side === 'original' ? current.getOriginalEditor() : current.getModifiedEditor();
+      const model = editor.getModel()!;
+      return editor.createDecorationsCollection(
+        (props.lineEndings ?? [])
+          .filter((item) => item.side === side && item.line <= model.getLineCount())
+          .map((item) => ({
+            range: new monaco.Range(
+              item.line,
+              model.getLineMaxColumn(item.line),
+              item.line,
+              model.getLineMaxColumn(item.line),
+            ),
+            options: {
+              showIfCollapsed: true,
+              stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+              after: {
+                content: ` ⟦${item.label}⟧`,
+                inlineClassName: 'diff-eol-marker',
+                cursorStops: monaco.editor.InjectedTextCursorStops.None,
+              },
+            },
+          })),
+      );
+    });
+    return () => collections.forEach((collection) => collection.clear());
+  }, [ready, props.lineEndings, props.original, props.modified]);
   return (
     <div
       style={{ width: props.width ?? '100%', height: props.height ?? '100%', position: 'relative' }}

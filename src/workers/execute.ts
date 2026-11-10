@@ -11,7 +11,11 @@ export async function executeJob(job: Job): Promise<Results[keyof Results]> {
       const { parseJson, stringify, sortKeys } = await import('../core/json/value');
       if (job.action === 'fromCsv') {
         const { fromCsv } = await import('../core/json/csv');
-        return { text: stringify(fromCsv(job.source, job.delimiter ?? ',', !!job.infer)) };
+        return {
+          text: stringify(
+            fromCsv(job.source, job.delimiter ?? ',', !!job.infer, !!job.skipEmptyRows),
+          ),
+        };
       }
       const value = parseJson(job.source);
       switch (job.action) {
@@ -57,7 +61,16 @@ export async function executeJob(job: Job): Promise<Results[keyof Results]> {
     }
     case 'text': {
       const { compareText } = await import('../core/diff');
-      return compareText(job.original, job.modified, job.options);
+      const result = compareText(job.original, job.modified, job.options);
+      return job.visual
+        ? {
+            ...result,
+            visual: (await import('../core/visualDiff')).projectVisualDiff(
+              result.hunks,
+              job.options,
+            ),
+          }
+        : result;
     }
     case 'inline': {
       const { compareInline } = await import('../core/diff');

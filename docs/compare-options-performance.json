@@ -1,0 +1,162 @@
+{
+  "date": "2026-11-10T06:14:28.190Z",
+  "browser": "157.0.4341.42",
+  "mode": "production-preview",
+  "method": "Single Edge browser; one Playwright test worker; wall includes upload/debounce/transfer/render. 16ms heartbeat is event-loop delay, not hardware input latency. CDP main-target JS heap after forced GC excludes Worker/native/GPU memory. One sample per scenario; no cross-device guarantee.",
+  "limits": {
+    "fileBytes": 5242880,
+    "jsonValues": 30000,
+    "workerWallTimeoutMs": 10000,
+    "textDiffAlgorithmTimeoutMs": 1500
+  },
+  "baselineMainThreadHeapBytes": 13888168,
+  "finalMainThreadHeapBytes": 52523396,
+  "finalMonacoModels": 6,
+  "externalRequests": 0,
+  "pageErrors": 0,
+  "results": [
+    {
+      "name": "lines-100",
+      "wallMs": 382.87829999999985,
+      "samples": 23,
+      "maxGapMs": 29.100000023841858,
+      "p95GapMs": 23.200000047683716,
+      "mainThreadHeapBytes": 15082600,
+      "originalBytes": 1580,
+      "modifiedBytes": 1576,
+      "added": 1,
+      "removed": 1,
+      "renderedChanges": 1
+    },
+    {
+      "name": "lines-1000",
+      "wallMs": 371.69679999999994,
+      "samples": 22,
+      "maxGapMs": 31.800000071525574,
+      "p95GapMs": 26.299999952316284,
+      "mainThreadHeapBytes": 15875520,
+      "originalBytes": 17780,
+      "modifiedBytes": 17775,
+      "added": 1,
+      "removed": 1,
+      "renderedChanges": 1
+    },
+    {
+      "name": "lines-10000",
+      "wallMs": 394.77160000000003,
+      "samples": 24,
+      "maxGapMs": 24.40000009536743,
+      "p95GapMs": 18.899999976158142,
+      "mainThreadHeapBytes": 16422356,
+      "originalBytes": 197780,
+      "modifiedBytes": 197774,
+      "added": 1,
+      "removed": 1,
+      "renderedChanges": 1
+    },
+    {
+      "name": "lines-50000",
+      "wallMs": 530.4542000000001,
+      "samples": 27,
+      "maxGapMs": 60.299999952316284,
+      "p95GapMs": 57.799999952316284,
+      "mainThreadHeapBytes": 18261152,
+      "originalBytes": 1077780,
+      "modifiedBytes": 1077773,
+      "added": 1,
+      "removed": 1,
+      "renderedChanges": 1
+    },
+    {
+      "name": "single-line-500k",
+      "wallMs": 450.33619999999974,
+      "samples": 24,
+      "maxGapMs": 37.10000002384186,
+      "p95GapMs": 35.89999997615814,
+      "mainThreadHeapBytes": 17359812,
+      "originalBytes": 500000,
+      "modifiedBytes": 500000,
+      "added": 1,
+      "removed": 1,
+      "renderedChanges": 1
+    },
+    {
+      "name": "single-line-5MiB",
+      "wallMs": 1173.9772999999996,
+      "samples": 35,
+      "maxGapMs": 269.2000000476837,
+      "p95GapMs": 264.2999999523163,
+      "mainThreadHeapBytes": 26923520,
+      "originalBytes": 5242880,
+      "modifiedBytes": 5242880,
+      "added": 1,
+      "removed": 1,
+      "renderedChanges": 1
+    },
+    {
+      "name": "repeated-50000",
+      "wallMs": 497.27299999999923,
+      "samples": 25,
+      "maxGapMs": 74.60000002384186,
+      "p95GapMs": 36.5,
+      "mainThreadHeapBytes": 30783440,
+      "originalBytes": 500000,
+      "modifiedBytes": 500001,
+      "added": 1,
+      "removed": 1,
+      "renderedChanges": 2
+    },
+    {
+      "name": "similar-500-changes",
+      "wallMs": 399.59999999999945,
+      "samples": 23,
+      "maxGapMs": 41,
+      "p95GapMs": 34.300000071525574,
+      "mainThreadHeapBytes": 20383020,
+      "originalBytes": 58890,
+      "modifiedBytes": 58890,
+      "added": 500,
+      "removed": 500,
+      "renderedChanges": 100
+    },
+    {
+      "name": "cancel-50000-disjoint",
+      "wallMs": 1929.0027999999993,
+      "samples": 114,
+      "maxGapMs": 54,
+      "p95GapMs": 17.100000023841858,
+      "mainThreadHeapBytes": 19634912,
+      "status": "cancelled"
+    },
+    {
+      "name": "json-20000-values",
+      "wallMs": 278.8891999999996,
+      "samples": 17,
+      "maxGapMs": 20.299999952316284,
+      "p95GapMs": 20.299999952316284,
+      "mainThreadHeapBytes": 23458808,
+      "bytes": 108891,
+      "renderedRows": 24
+    },
+    {
+      "name": "json-20000-structural-diff",
+      "wallMs": 263.65599999999904,
+      "samples": 13,
+      "maxGapMs": 46.5,
+      "p95GapMs": 46.5,
+      "mainThreadHeapBytes": 43805588,
+      "changes": 1
+    },
+    {
+      "name": "folder-500-files",
+      "wallMs": 1104.0154000000002,
+      "samples": 59,
+      "maxGapMs": 103.80000007152557,
+      "p95GapMs": 53.39999997615814,
+      "mainThreadHeapBytes": 52527132,
+      "filesPerSide": 500,
+      "modifiedFiles": 10,
+      "renderedFiles": 28
+    }
+  ]
+}

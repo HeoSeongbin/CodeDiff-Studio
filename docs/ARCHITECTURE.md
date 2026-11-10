@@ -84,3 +84,17 @@ Folder read/classification/relative matching은 기존 엔진에 남고 async te
 `components/AppShell.tsx`가 모든 도구 바깥에서 하나의 header/rail/menu를 렌더한다. App은 typed WorkspaceId와 최초 열린 도구 목록을 유지해 기존 lazy mount·hidden panel 수명을 보존한다. CodeCompare는 비교 작업 영역과 결과만 렌더하며 모델·원문·Worker 정책은 그대로다.
 
 헤더의 메뉴 버튼이 상단 nav를 hidden으로 토글한다. 닫혀 있을 때 키보드 탐색과 접근성 트리에서 제외되고, 왼쪽 nav는 항상6개 작업 공간의 진입점을 제공한다. 메뉴의 탭 버튼과 rail의 접근 가능한 이름을 구분해 테스트·키보드 사용에서도 경로가 명확하다. topbar ResizeObserver는 줄바꿈 높이를 rail의 sticky offset에 전달하고 unmount 시 해제한다. 화면 설정은 공통 메뉴 안의 기존 컴포넌트를 재사용한다.
+
+## Code Compare 비교 옵션 일치 수정
+
+core/diff는 변경하지 않는다. Code Compare의 text Worker 요청에 visual=true일 때만 core/visualDiff에서 같은 hunks의 물리 행/UTF16 원문 열·EOL 표기 데이터를 만든다. Folder comparator 등의 일반 text 요청에는 이 데이터가 붙지 않는다. 통계와 시각 기준이 갈라지는 별도 줄 Diff를 계산하지 않는다.
+
+CoreDiffProvider가 Monaco0.52.2의 인스턴스별 child service를 통해 시각 결과를 전달한다. 내부 계약은 이 어댑터와 명시적 d.ts에 격리하고 package/lock을 고정한다. JSON/Folder/Syntax의 기본 Monaco provider나 전역 service는 바꾸지 않는다. ManagedDiffEditor는 기존 공개 view-model 생명주기를 유지하며 child service와 EOL decorations도 정리한다. snapshot 불일치/대기 때 오래된 강조를 지우고 workspace가 취소/오류를 표시한다.
+
+빈 줄 무시로 생긴 물리 좌표의 간격은 별도 범위로 투영한다. 무시된 원문은 계속 모델에 남아 편집/복사/다운로드에 보존된다. 줄 내부 비교만 예산을 두고 Worker에서 수행하며 예산 초과는 전체 변경 행 강조로 폴백한다. EOL/EOF injected label은 모델 값에 포함되지 않는다. 이 어댑터는 내부 API 의존성을 가지므로 Monaco 업데이트 전에 production 회귀가 필수다(ADR-024).
+
+## JSON ↔ CSV 수정 경계
+
+core/json/csv의 flatten은 leaf Json 타입을 유지하며 CSV 직렬화 경계에서 배열/객체 셀만 문자열로 만든다. CSV→JSON의 skipEmptyRows는 jsonAction을 통해 Worker로 전달한다. 기존 strict 기본값을 유지하며 Papa step cursor로 raw record를 확인해 비인용 빈 레코드만 선택적으로 제외한다. 인용된 빈 데이터·내부 줄바꿈·원래 레코드 번호는 보존한다.
+
+JSON workspace는 방향에 따라 Source JSON 또는 Source CSV를 표시한다. JSON Editor는 hidden wrapper 안에서 유지해 원문과 모델을 보존한다. CSV는 기존 textarea를 왼쪽 입력으로 옮겨 변환 방향과 입력을 일치시키며 별도 다운로드/복사·방향별 샘플을 제공한다. 예제는 명시적 클릭 때만 메모리 원문을 교체한다. CSV 오류는 변환 버튼 옆에 표시하고 skip 옵션 변경도 기존 snapshot 취소/결과 무효화에 참여한다. 실제 파일·다른 비교 엔진·네트워크 처리 경계는 그대로다.

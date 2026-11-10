@@ -3,7 +3,7 @@ import { useCompute, useComputeClient, WorkspaceActive } from '../../hooks/useCo
 import { usePreferences } from '../../stores/preferences';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
-import { useJsonWorkspace, jsonSample } from '../../stores/jsonWorkspace';
+import { useJsonWorkspace, jsonSample, csvJsonSample, csvSample } from '../../stores/jsonWorkspace';
 import { type Segment, pathText, stringify, JSON_MAX_BYTES } from '../../core/json/value';
 
 import type { queryJson } from '../../core/json/query';
@@ -41,8 +41,10 @@ export default function JsonWorkspace() {
   const [direction, setDirection] = useState('toCsv'),
     [delimiter, setDelimiter] = useState(','),
     [infer, setInfer] = useState(false),
+    [skipEmptyRows, setSkipEmptyRows] = useState(false),
     [flatten, setFlatten] = useState(false),
     [columns, setColumns] = useState<string[]>([]);
+  const csvInput = state.tab === 'csv' && direction === 'toJson';
   const uploadVersion = useRef({ source: 0, target: 0, csv: 0, schema: 0 });
   const prefs = usePreferences();
   const narrow = useNarrowScreen();
@@ -62,6 +64,7 @@ export default function JsonWorkspace() {
       direction,
       delimiter,
       infer,
+      skipEmptyRows,
       typeName,
       alias,
       exported,
@@ -138,6 +141,7 @@ export default function JsonWorkspace() {
     direction,
     delimiter,
     infer,
+    skipEmptyRows,
     typeName,
     alias,
     exported,
@@ -197,12 +201,17 @@ export default function JsonWorkspace() {
         </div>
         <button
           onClick={() => {
-            uploadVersion.current.source++;
-            state.set({ source: jsonSample });
+            if (csvInput) {
+              uploadVersion.current.csv++;
+              state.set({ csv: csvSample.replaceAll(',', delimiter) });
+            } else {
+              uploadVersion.current.source++;
+              state.set({ source: state.tab === 'csv' ? csvJsonSample : jsonSample });
+            }
             setError('');
           }}
         >
-          JSON 샘플 불러오기
+          {csvInput ? 'CSV 샘플 불러오기' : 'JSON 샘플 불러오기'}
         </button>
       </div>
       <nav className="json-tabs" aria-label="JSON 도구">
@@ -230,7 +239,7 @@ export default function JsonWorkspace() {
           </button>
         </p>
       )}
-      {error && (
+      {error && state.tab !== 'csv' && (
         <div className="error" role="alert">
           {error}
         </div>
@@ -242,87 +251,125 @@ export default function JsonWorkspace() {
       )}
       <div className="json-grid">
         <section className="json-source">
-          <div className="tool-heading">
-            <h2>Source JSON</h2>
-            <label className="upload">
-              JSON 열기
-              <input
-                type="file"
-                aria-label="JSON 파일 업로드"
-                onChange={(e) => {
-                  void upload(e.target.files?.[0], 'source');
-                  e.target.value = '';
-                }}
-              />
-            </label>
-            <button disabled={actionBusy} onClick={() => void copy(state.source)}>
-              JSON 복사
-            </button>
-            <button disabled={actionBusy} onClick={() => downloadText(state.source, 'source.json')}>
-              JSON 저장
-            </button>
-          </div>
-          <div className="json-editor">
-            <Editor
-              height="100%"
-              language="json"
-              theme={prefs.theme === 'dark' ? 'vs-dark' : 'vs'}
-              value={state.source}
-              onChange={(value) => state.set({ source: value ?? '' })}
-              options={{
-                ariaLabel: 'JSON 원본 편집기',
-                automaticLayout: true,
-                minimap: { enabled: prefs.minimap && !narrow },
-                fontSize: 13,
-                wordWrap: 'on',
-                scrollBeyondLastLine: false,
-              }}
-            />
-          </div>
-          <div
-            role={!computation.busy && parsed.error ? 'alert' : 'status'}
-            className={!computation.busy && parsed.error ? 'json-parse-error' : 'json-valid'}
-          >
-            {parsed.error || '유효한 표준 JSON'}
-          </div>
-          <small>
-            최대 1 MiB · 30,000개 값 · 깊이 80 · JSONC 미지원 · 큰 정수는 문자열로 입력하세요.
-          </small>
-          {computation.error && <button onClick={computation.retry}>JSON 다시 분석</button>}
-          {state.tab === 'diff' && (
+          {csvInput && (
             <>
               <div className="tool-heading">
-                <h2>Modified JSON</h2>
+                <h2>Source CSV</h2>
                 <label className="upload">
-                  수정본 열기
+                  CSV 열기
                   <input
                     type="file"
-                    aria-label="JSON 수정본 업로드"
+                    aria-label="CSV 파일 업로드"
                     onChange={(e) => {
-                      void upload(e.target.files?.[0], 'target');
+                      void upload(e.target.files?.[0], 'csv');
                       e.target.value = '';
                     }}
                   />
                 </label>
+                <button disabled={actionBusy} onClick={() => void copy(state.csv)}>
+                  CSV 복사
+                </button>
+                <button disabled={actionBusy} onClick={() => downloadText(state.csv, 'source.csv')}>
+                  CSV 저장
+                </button>
               </div>
-              <div className="json-editor target-editor">
-                <Editor
-                  height="100%"
-                  language="json"
-                  theme={prefs.theme === 'dark' ? 'vs-dark' : 'vs'}
-                  value={state.target}
-                  onChange={(v) => state.set({ target: v ?? '' })}
-                  options={{
-                    ariaLabel: 'JSON 수정본 편집기',
-                    minimap: { enabled: prefs.minimap && !narrow },
-                    wordWrap: 'on',
-                    automaticLayout: true,
-                  }}
-                />
-              </div>
-              {target.error && <p role={computation.busy ? 'status' : 'alert'}>{target.error}</p>}
+              <textarea
+                aria-label="CSV 입력"
+                className="tool-textarea csv-source-input"
+                value={state.csv}
+                onChange={(e) => state.set({ csv: e.target.value })}
+              />
+              <small>
+                최대 1 MiB · 구분자를 입력 파일에 맞게 선택하세요. 기존 JSON 입력은 보존됩니다.
+              </small>
             </>
           )}
+          <div hidden={csvInput}>
+            <div className="tool-heading">
+              <h2>Source JSON</h2>
+              <label className="upload">
+                JSON 열기
+                <input
+                  type="file"
+                  aria-label="JSON 파일 업로드"
+                  onChange={(e) => {
+                    void upload(e.target.files?.[0], 'source');
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+              <button disabled={actionBusy} onClick={() => void copy(state.source)}>
+                JSON 복사
+              </button>
+              <button
+                disabled={actionBusy}
+                onClick={() => downloadText(state.source, 'source.json')}
+              >
+                JSON 저장
+              </button>
+            </div>
+            <div className="json-editor">
+              <Editor
+                height="100%"
+                language="json"
+                theme={prefs.theme === 'dark' ? 'vs-dark' : 'vs'}
+                value={state.source}
+                onChange={(value) => state.set({ source: value ?? '' })}
+                options={{
+                  ariaLabel: 'JSON 원본 편집기',
+                  automaticLayout: true,
+                  minimap: { enabled: prefs.minimap && !narrow },
+                  fontSize: 13,
+                  wordWrap: 'on',
+                  scrollBeyondLastLine: false,
+                }}
+              />
+            </div>
+            <div
+              role={!computation.busy && parsed.error ? 'alert' : 'status'}
+              className={!computation.busy && parsed.error ? 'json-parse-error' : 'json-valid'}
+            >
+              {parsed.error || '유효한 표준 JSON'}
+            </div>
+            <small>
+              최대 1 MiB · 30,000개 값 · 깊이 80 · JSONC 미지원 · 큰 정수는 문자열로 입력하세요.
+            </small>
+            {computation.error && <button onClick={computation.retry}>JSON 다시 분석</button>}
+            {state.tab === 'diff' && (
+              <>
+                <div className="tool-heading">
+                  <h2>Modified JSON</h2>
+                  <label className="upload">
+                    수정본 열기
+                    <input
+                      type="file"
+                      aria-label="JSON 수정본 업로드"
+                      onChange={(e) => {
+                        void upload(e.target.files?.[0], 'target');
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                </div>
+                <div className="json-editor target-editor">
+                  <Editor
+                    height="100%"
+                    language="json"
+                    theme={prefs.theme === 'dark' ? 'vs-dark' : 'vs'}
+                    value={state.target}
+                    onChange={(v) => state.set({ target: v ?? '' })}
+                    options={{
+                      ariaLabel: 'JSON 수정본 편집기',
+                      minimap: { enabled: prefs.minimap && !narrow },
+                      wordWrap: 'on',
+                      automaticLayout: true,
+                    }}
+                  />
+                </div>
+                {target.error && <p role={computation.busy ? 'status' : 'alert'}>{target.error}</p>}
+              </>
+            )}
+          </div>
         </section>
         <section
           className="json-tool-panel"
@@ -687,9 +734,23 @@ export default function JsonWorkspace() {
                     </label>
                   )}
                 </div>
+                {direction === 'toJson' && (
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={skipEmptyRows}
+                      onChange={(e) => setSkipEmptyRows(e.target.checked)}
+                    />{' '}
+                    빈 행 건너뛰기
+                  </label>
+                )}
                 {direction === 'toCsv' ? (
                   <>
-                    <p>컬럼 순서: 선택 순서대로 출력합니다. 전체 해제 시 모든 컬럼을 사용합니다.</p>
+                    <p>
+                      왼쪽 Source JSON에는 객체 배열을 입력하세요. 상단 JSON 샘플 불러오기로 변환용
+                      예제를 열 수 있습니다. 컬럼은 선택 순서로 출력하며 전체 해제 시 모든 컬럼을
+                      사용합니다.
+                    </p>
                     <div className="csv-columns">
                       {available.map((key) => (
                         <label key={key}>
@@ -710,25 +771,16 @@ export default function JsonWorkspace() {
                     </div>
                   </>
                 ) : (
-                  <>
-                    <label className="upload">
-                      CSV 열기
-                      <input
-                        type="file"
-                        aria-label="CSV 파일 업로드"
-                        onChange={(e) => {
-                          void upload(e.target.files?.[0], 'csv');
-                          e.target.value = '';
-                        }}
-                      />
-                    </label>
-                    <textarea
-                      aria-label="CSV 입력"
-                      className="tool-textarea"
-                      value={state.csv}
-                      onChange={(e) => state.set({ csv: e.target.value })}
-                    />
-                  </>
+                  <p>
+                    왼쪽 Source CSV를 입력하거나 업로드하세요. 빈 행 건너뛰기는 완전히 빈 행만
+                    제외하며, 따옴표로 감싼 빈 값·공백·구분자가 있는 행은 보존합니다. 기본값은
+                    기존의 엄격한 행 검사입니다.
+                  </p>
+                )}
+                {error && (
+                  <div className="error" role="alert">
+                    {error}
+                  </div>
                 )}
                 <button
                   onClick={() =>
@@ -741,6 +793,7 @@ export default function JsonWorkspace() {
                             columns: columns.length ? columns : undefined,
                             delimiter,
                             infer,
+                            skipEmptyRows,
                           })
                         ).text,
                       );
