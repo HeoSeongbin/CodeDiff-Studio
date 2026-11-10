@@ -70,3 +70,11 @@ Folder read/classification/relative matching은 기존 엔진에 남고 async te
 `stores/preferences`와 `DisplaySettings`는 세션 테마·MiniMap·패널 크기 및 모델/Worker 개수만 관리한다. CSS palette와 Monaco 테마를 함께 바꾸고 좁은 화면에는 Unified/1열/숨긴 MiniMap을 적용한다. `ManagedDiffEditor`는 공개 diff view model을 소유·동기 dispose해 이전 계산이 바뀐 문서를 참조하지 않게 한다. 텍스트 모델은 재사용하고 workspace state는 유지한다. 변경 목록100개 페이지와 상세20k자 cap은 UI 렌더링만 제한하며 원문 저장을 자르지 않는다.
 
 일반 Edge 회귀와 `playwright.performance.config.ts` 단일 Worker 측정은 분리한다. `CODEDIFF_TEST_PREVIEW=1`에서 실제 dist와 로컬 Worker/WASM을 검증한다. 성능 JSON의 main-target heap은 전체 브라우저/Worker 메모리가 아니다.
+
+## Phase 9 — 검증·배포 경계
+
+`ci.yml`은 pull_request/수동 실행/다른 workflow 호출에서 단위·통합·정적 검사와 루트 경로 production 전체 E2E를 실행한다. 쓰기 권한 없이 합성 fixture만 사용한다. `pages.yml`은 이 reusable regression job의 성공을 기다린 다음 Pages base_path로 재빌드하고 배포 전용 테스트를 통과한 dist artifact만 게시한다. 루트 회귀와 프로젝트 하위 경로 검증을 분리해 두 환경 모두 확인한다.
+
+`playwright.config.ts`는 로컬 Edge, CI Chromium을 사용한다. `playwright.deployment.config.ts`는 로컬 preview 또는 CODEDIFF_DEPLOYMENT_URL의 실제 정적 사이트를 검사한다. 브라우저의 파일 업로드는 File API로 읽으며 네트워크 업로드 API를 호출하지 않는다. 배포 테스트는 HTTP GET/HEAD 외 요청·외부 origin·pageerror·실패 응답을 감시하고 원본 fixture 디스크 내용을 다시 확인한다.
+
+성능 측정은 별도 수동 test:perf로 유지한다. 매번 실행하는 회귀 gate에 한 환경의 시간/heap 수치를 SLA로 고정하지 않는다. Pages가 이미 게시된 버전과 작업 트리의 변경을 구분하며, 로컬 테스트 통과가 원격 신규 workflow의 성공을 뜻하지 않는다.

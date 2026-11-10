@@ -215,3 +215,13 @@ StrictMode 보완: 개발 모드의 시험 mount에서 즉시 Worker를 생성�
 - 영향: vite.config.ts, index.html, public/favicon.svg, .github/workflows/pages.yml, deployment 전용 Playwright config/test. UI/비교 알고리즘·업로드 원문에는 영향 없음.
 - 검증: 실제 프로젝트 하위 경로 production Edge에서 compiled JS/Monaco/Worker/Syntax WASM/favicon 로딩 및 외부 요청0 확인. CI는 Chromium으로 같은 배포 테스트를 실행한다. 기존 Edge 회귀와 분리하여 루트 경로 테스트의 의미를 보존한다.
 - 근거: https://v6.vite.dev/guide/static-deploy 및 https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages
+
+## ADR-022 · 2026-11-10 · 회귀 gate와 실제 배포 검증 분리
+
+- 문제: 기존 Pages smoke는 초기 화면/Java 로딩만 확인했고 전체31개 회귀는 수동이었다. PR과 배포 전의 동일한 검사를 보장할 필요가 있다.
+- 대안: 배포 workflow에 모든 검사를 중복하거나 smoke만 계속 실행. 선택: contents read인 reusable ci.yml에서 root production 회귀를 수행하고 pages.yml은 regression 성공에 의존한다. PR은 같은 reusable workflow의 pull_request trigger로 검증한다. 실제 배포는 main push/수동 실행만 유지한다.
+- 경로/브라우저: 기본 상대 경로 root 회귀와 Pages base_path smoke를 별도 build에서 검증한다. 로컬은 설치된 Edge, CI는 설치한 Chromium을 사용한다. 실제 URL은 CODEDIFF_DEPLOYMENT_URL로 서버를 띄우지 않고 재사용한다.
+- 정확성: release.test.ts의 고정 seed250개 입력으로 독립 insertion/deletion 편집거리와 Diff 연산 수를 비교하고 물리 줄 위치·원문 재구성을 확인한다. UTF16 decode → Worker 어댑터 → Patch 재검증 → UTF8 export 통합과36개 확장자 감지도 추가한다.
+- 개인정보: 테스트는 합성 fixture만 사용하며 HTTP GET/HEAD 외 요청, origin 외부 요청,404/pageerror를 실패로 본다. 폴더 fixture는 검증된 tmpdir 하위 고유 디렉터리만 정리한다. 원본 파일 쓰기나 서비스 업로드 구현을 추가하지 않는다.
+- 영향: .github/workflows/{ci,pages}.yml, playwright.config.ts, e2e/deployment.spec.ts, src/tests/release.test.ts. 비교 엔진·JSON/Folder의 책임·파일 정책은 유지한다. 신규 외부 의존성 없음.
+- 한계: seed 검사는 모든 문자열에 대한 증명이 아니다. Edge/Chromium과 viewport emulation은 Firefox/Safari/모바일 실기기·WCAG 인증을 대체하지 않는다. 새 workflow의 원격 실행 결과는 로컬 결과와 구분하여 PROGRESS에 기록한다.

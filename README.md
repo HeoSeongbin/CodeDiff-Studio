@@ -1,6 +1,6 @@
 # CodeDiff Studio
 
-브라우저에서 소스 코드 비교·JSON 분석·필드 매핑을 로컬로 수행하는 React + TypeScript 개발 도구. 검증 완료 범위는 **Phase 0–8**입니다. 전체 요구사항은 [PROJECT.md](PROJECT.md)를 참고하세요.
+브라우저에서 소스 코드 비교·JSON 분석·필드 매핑을 로컬로 수행하는 React + TypeScript 개발 도구. Phase 9의 통합·배포 검증을 진행했습니다. [실행하기](https://heoseongbin.github.io/CodeDiff-Studio/) · [릴리스 검증표](docs/RELEASE-CHECKLIST.md) · [포트폴리오 소개](docs/PORTFOLIO.md). 전체 요구사항은 [PROJECT.md](PROJECT.md)를 참고하세요.
 
 ## 실행
 
@@ -47,13 +47,13 @@ jsdiff 원문 줄 토큰에 비교 옵션을 적용하고 실제 원문은 보�
 
 업로드 크기 정보는 업로드 시점 바이트 수입니다. BOM 없는 UTF16은 수동 선택해야 합니다. 각 파일의 저장 (UTF-8)은 현재 편집본을 BOM 없는 UTF-8로 다운로드합니다. 비교 옵션은 저장 내용에 영향을 주지 않습니다. 편집 전에는 업로드 텍스트의 혼합 개행도 보존하며, 편집 이후 Monaco가 파일 전체 개행을 모델의 형식으로 통일할 수 있습니다. 주요 계산은 로컬 Worker에서 처리하며 테마·MiniMap·패널 설정은 상단 화면 설정에서 조절합니다. 큰 단일 행의 상세 미리보기는 양쪽 각각 20,000자까지 표시하지만 저장 원문은 자르지 않습니다.
 
-Syntax Compare는 Java/C#/Python/JavaScript/TypeScript의 구문 비교를 제공합니다. Code Compare의 Folder/JSON 레일 아이콘은 각각 실제 작업 공간으로 연결됩니다. 배포 주소는 아직 없으며 GitHub Pages 및 Actions는 Phase 9 예정입니다. Vite base는 상대 경로로 설정했습니다.
+Syntax Compare는 Java/C#/Python/JavaScript/TypeScript의 구문 비교를 제공합니다. Code Compare의 Folder/JSON 레일 아이콘은 각각 실제 작업 공간으로 연결됩니다. GitHub Pages에서 정적 웹으로 제공하며, Actions가 검사 후 dist만 배포합니다. 기본 Vite base는 상대 경로이고 Pages에서는 프로젝트 경로를 주입합니다.
 
 ## 화면
 
 ![Phase 2 코드 비교 화면](docs/phase2-desktop.png)
 
-테스트 도구는 Vitest 5 및 ESLint 10으로 업데이트 후 검증했습니다. 개발 의존성의 minimatch 관련 moderate 보안 경고 10건이 남아 있으며 상세 상태는 PROGRESS에 기록했습니다. E2E는 설치된 Microsoft Edge를 사용합니다.
+테스트 도구는 Vitest 5 및 ESLint 10으로 업데이트 후 검증했습니다. 과거 개발 의존성 moderate 경고 10건은 PROGRESS에 기록했습니다. 이번 Phase9에서는 신규 audit 조회나 취약점 해결을 검증하지 않았습니다. E2E는 설치된 Microsoft Edge를 사용합니다.
 
 ## Phase 2 사용법
 
@@ -177,7 +177,7 @@ $env:CODEDIFF_TEST_PORT = '5200'
 npm run test:e2e
 ```
 
-Monaco의 큰 chunk, Tree-sitter glue의 eval/Node 모듈 externalization, Tailwind fallback의 WASI 경고가 남습니다. 사용자 코드를 실행하거나 외부 서버로 전송하는 기능은 없습니다. 실제 GitHub Pages·다른 OS/브라우저·모바일 실기기는 미검증입니다. Phase 8의 최신 기능·검증은 아래 내용을 참고하세요.
+Monaco의 큰 chunk, Tree-sitter glue의 eval/Node 모듈 externalization, Tailwind fallback의 WASI 경고가 남습니다. 사용자 코드를 실행하거나 외부 서버로 전송하는 기능은 없습니다. 이 문단은 당시 Phase 7 검증 기록입니다. 최신 실제 Pages 검증은 하단과 RELEASE-CHECKLIST를 참고하세요. 모바일 실기기·Firefox·Safari는 미검증입니다.
 
 ![Phase 7 Syntax Compare](docs/phase7-syntax-desktop.png)
 
@@ -211,7 +211,7 @@ npm run test:perf
 
 배포 주소: [CodeDiff Studio](https://heoseongbin.github.io/CodeDiff-Studio/).
 
-Settings → Pages → Build and deployment → Source를 **GitHub Actions**로 설정합니다. main에 push하면 Deploy GitHub Pages 워크플로가 검사·빌드·배포 하위 경로 테스트를 통과한 **dist**만 게시합니다. Actions에서 수동 실행도 가능합니다. 배포 job 성공 후 페이지를 새로 고치세요.
+Settings → Pages → Build and deployment → Source를 **GitHub Actions**로 설정합니다. main에 push하면 Deploy GitHub Pages 워크플로가 reusable Integration checks의 전체 production 회귀 성공을 기다린 뒤 검사·빌드·배포 하위 경로 테스트를 통과한 **dist**만 게시하도록 구성했습니다. 신규 workflow의 원격 실행 상태는 PROGRESS에서 확인하세요. Actions에서 수동 실행도 가능합니다. 배포 job 성공 후 페이지를 새로 고치세요.
 
 main 루트의 index.html은 개발용이며 이를 그대로 게시하면 /src/main.tsx404로 빈 화면이 나타납니다. 소스 HTML이나 해시 asset 이름을 수동 수정하지 마세요. favicon은 저장소의 SVG를 사용합니다. VITE_BASE_PATH는 Actions가 Pages 경로를 자동 주입하며, 일반 로컬 빌드는 기본 상대 경로를 유지합니다.
 
@@ -235,3 +235,21 @@ $env:CODEDIFF_DEPLOYMENT_URL = 'https://heoseongbin.github.io/CodeDiff-Studio/'
 npx playwright test --config=playwright.deployment.config.ts
 Remove-Item Env:CODEDIFF_DEPLOYMENT_URL
 ```
+
+## 통합 검증 및 개발 관리 — Phase 9
+
+- 단위·통합351개: 기존311개 + 릴리스 정확성40개(고정 seed250 입력의 재구성/편집거리, UTF16·Worker·Patch·저장 통합3개, 확장자36개).
+- 최신 production Edge 전체 회귀31/31, 실제 GitHub Pages Edge8/8. 배포 검사에서 초기 화면,5종 grammar, 파일·폴더 업로드, JSON 구조 비교·Formatter, Mapping/원문/Patch/폴더 보고서 저장, 새로고침·모바일6개 작업 공간, 외부 요청/비GET·HEAD/실패 응답/pageerror0을 확인했습니다.
+- pull_request/수동/reusable CI를 추가했고 Pages가 전체 회귀 성공에 의존하도록 연결했습니다. CI는 Chromium, 로컬 기본값은 설치된 Edge입니다. 새 workflow의 원격 실행은 커밋·푸시 후 확인해야 하며 로컬 통과만으로 원격 완료를 표시하지 않습니다.
+- 코드 비교 엔진과 Text/JSON/Folder의 책임, 입력 제한 및 원본 파일 정책은 유지했습니다. 신규 의존성은 없습니다. 알려진 경고·실기기 및 다른 엔진 미검증은 검증표에서 확인하세요.
+
+```powershell
+# 실제 사이트 검사 — 합성 fixture만 사용, 파일 내용의 네트워크 전송 없음
+$env:CODEDIFF_DEPLOYMENT_URL = 'https://heoseongbin.github.io/CodeDiff-Studio/'
+npm run test:deployment -- --workers=1
+Remove-Item Env:CODEDIFF_DEPLOYMENT_URL
+```
+
+![실제 배포 화면](docs/phase9-deployed-desktop.png)
+
+[요구사항별 검증 근거·재현](docs/RELEASE-CHECKLIST.md), [설계 해결 과정과 프로젝트 소개](docs/PORTFOLIO.md), [현재 상태와 다음 작업](docs/PROGRESS.md).

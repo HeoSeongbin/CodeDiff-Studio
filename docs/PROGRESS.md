@@ -1,10 +1,10 @@
 # 개발 진행 현황
 
-기준일: 2026-11-09 (Asia/Seoul)
+기준일: 2026-11-10 (Asia/Seoul)
 
 ## 현재 Phase
 
-Phase 8 완료. Phase 9 — 통합 테스트 및 배포 진행 중. 현재는 GitHub Pages 빈 화면 복구 범위이며 Phase 9 전체 완료로 처리하지 않는다. 이전 기록은 당시 이력이며 최신 상태는 하단 배포 복구 기록을 기준으로 한다.
+Phase 9 — 통합 테스트 및 배포. 릴리스 테스트·로컬 production 전체 회귀·실제 Pages 기능 검증·문서 정리 완료. 새 reusable CI와 배포 gate의 원격 실행은 커밋·푸시 후 검증 대기이므로 Phase9 전체 완료로 처리하지 않는다. 최신 상태는 하단2026-11-10 기록을 기준으로 하며 이전 기록은 당시 이력이다.
 
 ## 완료 작업
 
@@ -403,3 +403,37 @@ AGENTS/PROJECT/PROGRESS/DECISIONS/README, 실제 소스 및 jsdiff의 create/app
 - https://heoseongbin.github.io/CodeDiff-Studio/ 실제 주소에서 Edge 배포 테스트1/1 통과. compiled HTML, Monaco, 계산 Worker, Syntax WASM, favicon200 확인; pageerror/실패/외부 요청0. 빈 화면 원인 해결 확인.
 - CODEDIFF_DEPLOYMENT_URL로 같은 배포 smoke 테스트를 게시된 주소에도 실행할 수 있다. 이 모드에서는 로컬 서버를 시작하지 않는다.
 - Phase9 전체 완료를 선언하지 않는다. 후속: 전체 요구사항과 최종 완료 조건의 통합 검토, README/포트폴리오 소개 정리, 필요 시 추가 회귀와 실기기 검증. 이번 변경 파일은 배포 workflow/config/favicon/전용 E2E와 README/PROGRESS/ADR이다.
+
+## Phase 9 · 2026-11-10 · 통합 검증·릴리스 문서
+
+### 시작 상태 / 범위
+
+- AGENTS, PROJECT, PROGRESS, DECISIONS, README 및 실제 core/features/tests/Git 확인. main은 origin/main과 같고 작업 트리는 깨끗했다. 최신 ba072cc의 Pages 복구는 구현·실제 배포 검증과 일치했다.
+- 미완료 Phase9의 전체 회귀·실배포 사용 흐름·CI gate·요구사항 근거·포트폴리오 설명을 진행했다. 비교 알고리즘·UI 기능·원본 파일 정책은 변경하지 않았다. 다음 Phase나 신규 제품 기능으로 확장하지 않았다.
+
+### 구현 / 변경 파일
+
+- src/tests/release.test.ts:40개 추가. 고정 seed250개 혼합 EOL/Unicode/반복 입력의 원문 재구성·물리 줄 위치·독립 최소 편집거리, UTF16 decode/Worker Text/Patch/UTF8 export 통합3개,36개 확장자 감지·공통 Text 비교.
+- e2e/deployment.spec.ts:1→8개로 확대. 파일·JSON·Mapping·Folder·Patch 업로드/다운로드, 원본 disk/CRLF 보존,5개 grammar, 새로고침·브라우저 저장소 없음·6공간 모바일. HTTP GET/HEAD 외 요청·외부 요청·실패 응답·pageerror를 실패 처리한다. 모든 입력은 합성 fixture다.
+- .github/workflows/ci.yml:PR/수동/reusable read-only 검사 및 production 전체 E2E. pages.yml은 regression 성공 후 Pages base 재빌드·8개 smoke·artifact 게시. playwright.config.ts는 CI Chromium/로컬 Edge, package.json은 test:deployment 명령 추가. 신규 dependency 없음.
+- README 상단의 배포 예정 등 오래된 안내를 수정하고 최신 검증/소개 링크 추가. RELEASE-CHECKLIST.md는 PROJECT 최종 조건별 근거·명령·한계, PORTFOLIO.md는 사용 흐름·설계 해결 과정·화면. TEST-CASES/ARCHITECTURE/ADR-022 최신화. 기존 요구사항은 삭제하지 않았다.
+
+### 검증 결과
+
+- npm test **351/351**, npm run typecheck/lint/build 통과. 기본 상대 경로 build와 /CodeDiff-Studio/ base build 모두 통과.
+- 최신 production Edge 전체 회귀 **31/31** 통과: Text/JSON/Mapping/Patch/Folder/Syntax/Worker/UI·취소/오류/편집/원문 저장 등 기존 기능 보존.
+- 로컬 production /CodeDiff-Studio/ 배포 검사 **8/8** 및 실제 https://heoseongbin.github.io/CodeDiff-Studio/ Edge **8/8** 통과. 현재 게시된 ba072cc의 제품 기능을 실제 주소에서 검증한 것이며 미푸시 CI 설정이 배포됐다는 의미가 아니다.
+- 새 실제 배포 desktop/mobile 이미지 생성·시각 검토. 비교 완료 상태·모바일 레이아웃 확인. 회귀가 자동 재생성한 기존 Phase 이미지13개는 시작 커밋 원본으로 복원했다. 배포 테스트는 실제 URL 모드에서만 문서용 화면을 갱신한다.
+- 성능 benchmark는 재실행하지 않았으며 Phase8 PERFORMANCE.md의12시나리오 측정 기록을 유지한다. 이번 변경은 계산/렌더 성능 알고리즘을 바꾸지 않았다.
+
+### 발견한 문제 / 남은 제한
+
+- README 상단은 여전히 배포 주소 없음/Phase9 예정이라고 안내했고 TEST-CASES 상단 총계도 과거271개였다. 최신 상태와 당시 이력을 구분하도록 수정했다.
+- 기존 Pages smoke는 초기 Java만 확인했다. 실제 파일 업로드/JSON/Folder/다운로드/새로고침/모바일/5종WASM으로 보강했다. 테스트 중 비교 완료 전 화면을 저장하던 순서는 완료를 기다리도록 수정했다.
+- 기존 Monaco 큰 chunk, Tree-sitter glue eval/Node externalization 경고 유지. audit를 새로 조회하거나 취약점 해결을 검증하지 않았다. Firefox/Safari·모바일 실기기·전체 접근성 인증은 미검증이다.
+- 신규 reusable CI의 Ubuntu 원격 실행·PR 이벤트·Pages regression gate는 아직 미실행이다. 로컬 Edge 결과와 과거 Ubuntu Chromium smoke 성공을 새 workflow 성공으로 대체하지 않는다.
+
+### 다음 작업 / 인계
+
+- 현재 변경은 Phase9 통합 검증 커밋에 포함하며 미푸시 상태로 남긴다. 푸시 후 Deploy GitHub Pages의 regression → build → deploy 성공을 확인하고 실제 주소8개 검사를 다시 실행한다. PR trigger 자체는 실제 PR에서 별도로 확인해야 한다.
+- 위 원격 gate 확인 전 Phase9 전체 완료로 표시하지 않는다. PROJECT에 정의된 다음 Phase는 없으며, Phase9를 검증해 종료한 후 추가 개선은 별도 범위를 정한다. 임의의 Phase10을 만들지 않는다.

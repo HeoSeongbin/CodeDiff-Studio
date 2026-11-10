@@ -8,7 +8,7 @@ npm run build
 npm run test:e2e
 ```
 
-최종 결과 (2026-11-06): 자동화 **271/271**, Edge E2E **18/18**, typecheck/lint/build 통과. Monaco 번들 크기 경고 유지.
+최신 검증(2026-11-10): 단위·통합 **351/351**, production Edge **31/31**, 실제 Pages Edge **8/8**, typecheck/lint/build 통과. 아래 Phase별 기록은 당시 이력이며 최신 범위·제한은 하단 Phase9와 RELEASE-CHECKLIST.md를 따른다. Monaco 번들 크기 경고 유지.
 
 ## 단위 테스트
 
@@ -106,3 +106,13 @@ Phase 4 당시 결과: 단위 **161/161**, Edge E2E **12/12**, typecheck/lint/bu
 - 개발 모드 기존26개+Phase8 기존4개 통과, 신규 입력 fixture를 명시 업로드로 보완한 뒤 Phase8 전체5/5 재검증. bulk keyboard 테스트의 잘못된 JSON fixture는 실제 source parse 오류로 표기되었고 동일로 오판하지 않았다.
 - 성능은 일반 회귀에서 제외한 단일 Playwright worker config로 분리. npm run test:perf production1/1 통과,12시나리오 정확성·응답성·DOM cap·원본 파일 불변·외부 요청0·pageerror0·모델6개. 수치/방법/한계는 PERFORMANCE.md/phase8-performance.json 참조. main-target heap은 Worker/native/GPU를 제외한다.
 - TypeScript·ESLint·Production Build 통과. 큰 Monaco chunk/Tree-sitter glue/WASI 경고와 실제 배포·타 OS/브라우저·실기기·전체 접근성 인증 미검증을 문서에 남긴다.
+
+## Phase 9 · 2026-11-10 · 릴리스 통합 검증
+
+- src/tests/release.test.ts 신규40개: 고정 seed250개 혼합 개행·반복·Unicode 입력에서 hunk 적용으로 수정본 재구성, 각 변경의 물리 줄 위치, 독립 insertion/deletion 거리와 연산 수 확인. UTF16 decode → Worker Text/Patch 어댑터 → raw Patch 재검증 → UTF8 export3종 EOL, 원본 bytes 불변. 문서화한36개 확장자 감지와 텍스트 비교.
+- 최신 단위·통합351/351 통과. npm run typecheck/lint/build 통과. Windows Edge production 전체31/31 재실행 통과. 성능12시나리오는 이번에 재측정하지 않았으며 Phase8 측정 기록을 유지한다.
+- e2e/deployment.spec.ts8개: 초기 compiled HTML/Monaco/Worker/favicon, 실제 파일 업로드/원문 및 정확한 CRLF Patch 저장/재적용, 새로고침·영구 저장 없음·모바일6공간, JSON null/부재·타입 차이/format/download, Mapping Target download, 실제 폴더 업로드/정확한 상태·메타데이터 보고서/handoff/디스크 원본 불변, Java/C#/Python/JS/TS WASM.
+- 실제 https://heoseongbin.github.io/CodeDiff-Studio/ 에서 Edge8/8 통과. HTTP GET/HEAD 외 요청·외부 요청·실패 응답/requestfailed/pageerror0. 신규 대용량 처리·모든 브라우저/OS·모바일 실기기·전체 WCAG 적합성은 검증하지 않았다.
+- docs/phase9-deployed-{desktop,mobile}.png는 실제 배포 주소에서 비교 완료 후 생성하고 시각 검토했다. 과거 Phase 화면의 회귀 자동 생성본은 시작 커밋의 이력 이미지로 복원했다.
+- ci.yml은 PR/수동/reusable regression, pages.yml은 regression 성공 후 base_path 재빌드·배포 smoke를 통과해야 게시하도록 구성한다. 신규 workflow 원격 실행은 아직 검증하지 않았다. 기존 2026-11-09 CI 성공과 구분한다.
+- 검증 방법·요구사항별 근거는 RELEASE-CHECKLIST.md. 이 날짜 이후 문서 상단에 이력을 대표하는 오래된 총계를 사용하지 않는다.

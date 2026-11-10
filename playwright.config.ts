@@ -5,7 +5,7 @@ export default defineConfig({
   testDir: './e2e',
   testIgnore: ['**/performance.spec.ts', '**/deployment.spec.ts'],
   use: {
-    channel: 'msedge',
+    channel: process.env.CI ? undefined : 'msedge',
     baseURL: `http://127.0.0.1:${port}`,
     viewport: { width: 1440, height: 1000 },
   },
